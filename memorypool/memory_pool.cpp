@@ -18,7 +18,7 @@ uint32_t get_align_order(uint32_t size)
 		return 0;
 	}
 
-	int order = 0;
+	uint32_t order = 0;
 	//算2的幂，固定值
 	num = (num + 1) / 2 * 2;
 	while (num > 1) {
@@ -29,25 +29,33 @@ uint32_t get_align_order(uint32_t size)
 	return order;
 }
 
-int get_seg_item_size(seg_item *item)
+static uint32_t get_seg_item_size(seg_item *item)
 {
 	assert(item != NULL);
-	int size = item->linear_addr_offset_end - item->linear_addr_offset_start;
+	uint32_t size = item->linear_addr_offset_end - item->linear_addr_offset_start;
 	assert(size >= 0);
 	return size;
 }
 
-void check_memory_pool_meta(memory_pool *pool)
+static void check_linear_meta_running_state(memory_pool *pool)
 {
 	seg_item *head = (seg_item *)pool->memory_addr;
 
-	int size = 0;
+	uint32_t size = 0;
 	seg_item *item = head;
 	do {
 		assert(item->magic == SEG_ITEM_MAGIC);
-		size += get_seg_item_size(item);
+		assert(item->state == STAT_IN_USE || item->state == STAT_IN_FREE);
 
-		printf("%p\n", item);
+		assert(item->linear_addr_list_prev->linear_addr_offset_end == item->linear_addr_offset_start ||
+			(item->linear_addr_list_prev->linear_addr_offset_end == pool->memory_max_size &&
+				(item->linear_addr_offset_start == 0)));
+
+		assert(item->linear_addr_list_next->linear_addr_offset_start == item->linear_addr_offset_end ||
+			(item->linear_addr_list_next->linear_addr_offset_start == 0 &&
+				(item->linear_addr_offset_end == pool->memory_max_size)));
+
+		size += get_seg_item_size(item);
 
 		item = item->linear_addr_list_next;
 	} while (item != head);
@@ -57,6 +65,16 @@ void check_memory_pool_meta(memory_pool *pool)
 	item = head;
 	do {
 		assert(item->magic == SEG_ITEM_MAGIC);
+		assert(item->state == STAT_IN_USE || item->state == STAT_IN_FREE);
+
+		assert(item->linear_addr_list_prev->linear_addr_offset_end == item->linear_addr_offset_start ||
+			(item->linear_addr_list_prev->linear_addr_offset_end == pool->memory_max_size &&
+				(item->linear_addr_offset_start == 0)));
+
+		assert(item->linear_addr_list_next->linear_addr_offset_start == item->linear_addr_offset_end ||
+			(item->linear_addr_list_next->linear_addr_offset_start == 0 &&
+				(item->linear_addr_offset_end == pool->memory_max_size)));
+
 		size += get_seg_item_size(item);
 
 		item = item->linear_addr_list_prev;
@@ -64,9 +82,74 @@ void check_memory_pool_meta(memory_pool *pool)
 	assert(size == pool->memory_max_size);
 }
 
+void check_free_meta_running_state(memory_pool *pool)
+{
+	seg_item *head, *item;
+	uint32_t order;
+
+	for (uint32_t i = 0; i <= pool->memory_max_order; i++) {
+
+		head = (seg_item *)&(pool->seg_head_arr[i]);
+		item = head->free_list_next;
+		while (item != head) {
+			assert(item->magic == SEG_ITEM_MAGIC);
+			assert(item->state == STAT_IN_FREE);
+
+			order = get_align_order(get_seg_item_size(item));
+			assert(order == i);
+
+			item = item->free_list_next;
+		}
+
+		item = head->free_list_prev;
+		while (item != head) {
+			assert(item->magic == SEG_ITEM_MAGIC);
+			assert(item->state == STAT_IN_FREE);
+
+			order = get_align_order(get_seg_item_size(item));
+			assert(order == i);
+
+			item = item->free_list_prev;
+		}
+	}
+}
+
+void check_meta_running_state(memory_pool *pool)
+{
+	check_linear_meta_running_state(pool);
+	check_free_meta_running_state(pool);
+}
+
+//检查元信息是完整状态
+void check_meta_complete_state(memory_pool *pool)
+{
+	seg_item *head = (seg_item *)pool->memory_addr;
+	assert(get_seg_item_size(head) == pool->memory_max_size);
+	assert(head->magic == SEG_ITEM_MAGIC);
+	assert(head->state == STAT_IN_FREE);
+	assert(head->linear_addr_list_next == head && head->linear_addr_list_prev == head);
+
+	uint32_t order = get_align_order(get_seg_item_size(head));
+	seg_item *free_head = (seg_item *)&(pool->seg_head_arr[order]);
+	assert(free_head->free_list_next == head);
+	assert(free_head->free_list_prev == head);
+	assert(head->free_list_next == free_head);
+	assert(head->free_list_prev == free_head);
+
+	for (uint32_t i = 0; i <= pool->memory_max_order; i++) {
+		if (i == order) {
+			continue;
+		}
+
+		free_head = (seg_item *)&(pool->seg_head_arr[i]);
+		assert(free_head->free_list_next == free_head);
+		assert(free_head->free_list_prev == free_head);
+	}
+}
+
 void seg_free_order_add(memory_pool *pool, seg_item *item)
 {
-	uint32_t order = get_align_order(item->linear_addr_offset_end - item->linear_addr_offset_start);
+	uint32_t order = get_align_order(get_seg_item_size(item));
 
 	assert(order >= 0 && order <= pool->memory_max_order);
 	seg_head *head = &(pool->seg_head_arr[order]);
@@ -77,10 +160,10 @@ void seg_free_order_add(memory_pool *pool, seg_item *item)
 	item->free_list_prev = (seg_item *)head;
 }
 
-bool is_memory_pool_addr(memory_pool *pool, void *p)
+bool is_memory_pool_addr(memory_pool *pool, void *ptr)
 {
-	if ((uint64_t)pool->memory_addr <= (uint64_t)p &&
-		(uint64_t)p < (uint64_t)pool->memory_addr + pool->memory_max_size) {
+	if ((uint64_t)pool->memory_addr <= (uint64_t)ptr &&
+		(uint64_t)ptr < (uint64_t)pool->memory_addr + pool->memory_max_size) {
 		return true;
 	}
 	return false;
@@ -163,8 +246,8 @@ void* memory_pool_malloc(memory_pool *pool, uint32_t size)
 		return os_malloc(size);
 	}
 
-	int need_size = MP_MEMORY_SIZE_ALIGN(size + sizeof(seg_item));
-	int need_order = get_align_order(need_size);
+	uint32_t need_size = MP_MEMORY_SIZE_ALIGN(size + sizeof(seg_item));
+	uint32_t need_order = get_align_order(need_size);
 	for (uint32_t curt_order = need_order; curt_order <= pool->memory_max_order; curt_order++) {
 
 		seg_head *head = &(pool->seg_head_arr[curt_order]);
@@ -188,7 +271,7 @@ void* memory_pool_malloc(memory_pool *pool, uint32_t size)
 			continue;
 		}
 
-		//先拆出来
+		//先从free链表里拆出来
 		item->free_list_next->free_list_prev = item->free_list_prev;
 		item->free_list_prev->free_list_next = item->free_list_next;
 
@@ -215,7 +298,7 @@ void* memory_pool_malloc(memory_pool *pool, uint32_t size)
 #ifdef _DEBUG_
 		item->magic = SEG_ITEM_MAGIC;
 #endif
-		//分出来的空间保存起来
+		//分出来的空间保存到free链表
 		seg_free_order_add(pool, item);
 
 		//返回
@@ -226,14 +309,14 @@ void* memory_pool_malloc(memory_pool *pool, uint32_t size)
 	return os_malloc(size);
 }
 
-void memory_pool_free(memory_pool *pool, void *p)
+void memory_pool_free(memory_pool *pool, void *ptr)
 {
-	if (!is_memory_pool_addr(pool, p)) {
-		os_free(p);
+	if (!is_memory_pool_addr(pool, ptr)) {
+		os_free(ptr);
 		return;
 	}
 
-	seg_item *curt = (seg_item *)((uint8_t *)p - sizeof(seg_item));
+	seg_item *curt = (seg_item *)((uint8_t *)ptr - sizeof(seg_item));
 #ifdef _DEBUG_
 	assert(curt->magic == SEG_ITEM_MAGIC);
 #endif
@@ -325,4 +408,14 @@ void memory_pool_free(memory_pool *pool, void *p)
 		//把当前块加入free链表
 		seg_free_order_add(pool, curt);
 	}
+}
+
+bool memory_pool_part_free(memory_pool *pool, void *ptr, part_info *info)
+{
+	if (!is_memory_pool_addr(pool, ptr)) {
+		os_free(ptr);
+		return;
+	}
+
+
 }

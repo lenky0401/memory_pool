@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-
 #define mp_print printf
 #define MP_MAX_SIZE (120 * 1024 * 1024)
 
@@ -29,13 +28,13 @@ typedef struct seg_item {
 	uint32_t magic;
 #endif
 
-	int state;
+	uint32_t state;
 
-	int linear_addr_offset_start;		//当前seg的开始位置，包含seg结构体大小在内
-	int linear_addr_offset_end;		//当前seg的结束位置，包含seg结构体大小在内
+	uint32_t linear_addr_offset_start;	//当前seg管理内存段的开始线性地址，包含seg结构体大小在内
+	uint32_t linear_addr_offset_end;	//当前seg管理内存段的结束线性地址，包含seg结构体大小在内
 
-	seg_item *linear_addr_list_prev;
-	seg_item *linear_addr_list_next;
+	seg_item *linear_addr_list_prev;	//线性地址链表
+	seg_item *linear_addr_list_next;	//线性地址链表
 } seg_item;
 
 typedef struct seg_head {
@@ -52,11 +51,19 @@ typedef struct memory_pool{
 } memory_pool;
 
 uint32_t get_align_order(uint32_t size);
-void check_memory_pool_meta(memory_pool *pool);
+void check_meta_running_state(memory_pool *pool);
+void check_meta_complete_state(memory_pool *pool);
 
 memory_pool* memory_pool_create(uint32_t size, bool thread_safe);
 void memory_pool_destroy(memory_pool *pool);
 
 void* memory_pool_malloc(memory_pool *pool, uint32_t size);
-void memory_pool_free(memory_pool *pool, void *p);
+void memory_pool_free(memory_pool *pool, void *ptr);
 
+#define PART_INFO_MAX_NUM (8)
+typedef struct part_info {
+	uint32_t num;
+	void* ptr[PART_INFO_MAX_NUM + 1];
+} part_info;
+
+bool memory_pool_part_free(memory_pool *pool, void *ptr, part_info *info);
