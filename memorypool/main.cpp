@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <malloc.h>
 
+#include "memory_pool_inner.h"
 #include "memory_pool.h"
 
 void test()
@@ -12,11 +13,9 @@ void test()
 	assert(get_align_order(64) == 0);
 }
 
-
 int main()
 {
 	test();
-
 
 	memory_pool *pool = memory_pool_create(10000, 1);
 

@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "memory_pool_inner.h"
 #include "memory_pool.h"
 
 uint32_t get_align_order(uint32_t size)
@@ -160,13 +161,19 @@ void seg_free_order_add(memory_pool *pool, seg_item *item)
 	item->free_list_prev = (seg_item *)head;
 }
 
-bool is_memory_pool_addr(memory_pool *pool, void *ptr)
+static bool in_memory_pool_range(memory_pool *pool, void *ptr, int32_t size)
 {
+	assert(size > 0);
 	if ((uint64_t)pool->memory_addr <= (uint64_t)ptr &&
-		(uint64_t)ptr < (uint64_t)pool->memory_addr + pool->memory_max_size) {
+		(uint64_t)ptr + size <= (uint64_t)pool->memory_addr + pool->memory_max_size) {
 		return true;
 	}
 	return false;
+}
+
+static bool is_memory_pool_addr(memory_pool *pool, void *ptr)
+{
+	return in_memory_pool_range(pool, ptr, 1);
 }
 
 memory_pool* memory_pool_create(uint32_t size, bool thread_safe)
@@ -207,9 +214,7 @@ memory_pool* memory_pool_create(uint32_t size, bool thread_safe)
 	item->linear_addr_offset_end = size;
 	item->linear_addr_list_next = item->linear_addr_list_prev = item;
 	item->state = STAT_IN_FREE;
-#ifdef _DEBUG_
 	item->magic = SEG_ITEM_MAGIC;
-#endif
 
 	seg_free_order_add(pool, item);
 
@@ -295,9 +300,8 @@ void* memory_pool_malloc(memory_pool *pool, uint32_t size)
 		item->linear_addr_list_next->linear_addr_list_prev = item;
 
 		item->state = STAT_IN_FREE;
-#ifdef _DEBUG_
 		item->magic = SEG_ITEM_MAGIC;
-#endif
+
 		//分出来的空间保存到free链表
 		seg_free_order_add(pool, item);
 
@@ -309,17 +313,10 @@ void* memory_pool_malloc(memory_pool *pool, uint32_t size)
 	return os_malloc(size);
 }
 
-void memory_pool_free(memory_pool *pool, void *ptr)
+void memory_pool_free_inner(memory_pool *pool, seg_item *curt)
 {
-	if (!is_memory_pool_addr(pool, ptr)) {
-		os_free(ptr);
-		return;
-	}
-
-	seg_item *curt = (seg_item *)((uint8_t *)ptr - sizeof(seg_item));
-#ifdef _DEBUG_
-	assert(curt->magic == SEG_ITEM_MAGIC);
-#endif
+	assert(pool);
+	assert(curt);
 
 	seg_item *prev = curt->linear_addr_list_prev;
 	seg_item *next = curt->linear_addr_list_next;
@@ -327,7 +324,7 @@ void memory_pool_free(memory_pool *pool, void *ptr)
 	assert(prev->magic == SEG_ITEM_MAGIC);
 	assert(prev->state == STAT_IN_USE || prev->state == STAT_IN_FREE);
 	assert(prev->linear_addr_offset_end == curt->linear_addr_offset_start ||
-		(prev->linear_addr_offset_end == pool->memory_max_size && 
+		(prev->linear_addr_offset_end == pool->memory_max_size &&
 			(curt->linear_addr_offset_start == 0)));
 
 	assert(next->magic == SEG_ITEM_MAGIC);
@@ -410,12 +407,98 @@ void memory_pool_free(memory_pool *pool, void *ptr)
 	}
 }
 
-bool memory_pool_part_free(memory_pool *pool, void *ptr, part_info *info)
+void memory_pool_free(memory_pool *pool, void *ptr)
 {
+	//不在内存池范围里，直接释放
 	if (!is_memory_pool_addr(pool, ptr)) {
 		os_free(ptr);
 		return;
 	}
 
+	seg_item *curt = (seg_item *)((uint8_t *)ptr - sizeof(seg_item));
+	assert(curt->magic == SEG_ITEM_MAGIC);
+	assert(curt->state == STAT_IN_USE);
 
+	memory_pool_free_inner(pool, curt);
+}
+
+int memory_pool_part_free(memory_pool *pool, void *ptr, part_info_array *info)
+{
+	//参数错误
+	if (!pool || !ptr || !info) {
+		return PART_FREE_RET_Bad_parameter;
+	}
+
+	//不在内存池范围里，不支持部分释放
+	if (!is_memory_pool_addr(pool, ptr)) {
+		return PART_FREE_RET_Not_Supported;
+	}
+
+	//参数错误
+	//1，部分内存个数是否错误
+	if (info->num <= 0 || info->num > PART_INFO_MAX_NUM) {
+		return PART_FREE_RET_Bad_partinfo;
+	}
+	//2，部分内存太小或不在内存池范围里
+	for (int i = 0; i < info->num; i++) {
+		void* part_ptr = info->part_arr[i].part_ptr;
+		int32_t part_size = info->part_arr[i].part_size;
+		if (part_size < MP_ALIGN_SIZE || !in_memory_pool_range(pool, part_ptr, part_size)) {
+			return PART_FREE_RET_Bad_partinfo;
+		}
+	}
+	//3，部分内存之间是否有相互重叠
+	for (int i = 0; i < info->num; i++) {
+		uint64_t i_start = (uint64_t)info->part_arr[i].part_ptr;
+		uint64_t i_end = i_start + info->part_arr[i].part_size;
+		for (int j = i + 1; j < info->num; j++) {
+			uint64_t j_start = (uint64_t)info->part_arr[j].part_ptr;
+			uint64_t j_end = j_start + info->part_arr[j].part_size;
+			/**
+			 * 不重叠的情况：
+			 * 1，线段1的终点在线段2的始点之前，或
+			 * 2，线段2的终点在线段1的始点之前。
+			 * 相反情况则是有重叠，有重叠则返回错误。
+			 */
+			if (!(i_end <= j_start || j_end <= i_start)) {
+				return PART_FREE_RET_Bad_partinfo;
+			}
+		}
+	}
+
+	seg_item *head = (seg_item *)((uint8_t *)ptr - sizeof(seg_item));
+	assert(head->magic == SEG_ITEM_MAGIC);
+	assert(head->state == STAT_IN_USE);
+
+	//开始进行部分内存释放
+	for (int i = 0; i < info->num; i++) {
+		void* part_ptr = info->part_arr[i].part_ptr;
+		int32_t part_size = info->part_arr[i].part_size;
+
+		seg_item *curt = (seg_item *)((uint8_t *)part_ptr);
+		curt->magic = SEG_ITEM_MAGIC;
+		curt->state = STAT_IN_FREE;
+		curt->linear_addr_offset_start = (uint32_t)((uint64_t)part_ptr - (uint64_t)pool->memory_addr);
+		curt->linear_addr_offset_end = curt->linear_addr_offset_start + part_size;
+
+		seg_item *item = head;
+		do {
+			if (curt->linear_addr_offset_end <= item->linear_addr_list_next->linear_addr_offset_start) {
+				break;
+			}
+			item = item->linear_addr_list_next;
+		} while (item != head);
+		curt->linear_addr_list_prev = item;
+		curt->linear_addr_list_next = item->linear_addr_list_next;
+		item->linear_addr_list_next = curt;
+		curt->linear_addr_list_next->linear_addr_list_prev = curt;
+
+#ifdef __DEBUG
+		curt->free_list_prev = (seg_item *)SEG_ITEM_INVALID_VALUE;
+		curt->free_list_next = (seg_item *)SEG_ITEM_INVALID_VALUE;
+#endif
+		memory_pool_free_inner(pool, curt);
+	}
+
+	return PART_FREE_RET_Ok;
 }
