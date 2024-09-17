@@ -1,47 +1,49 @@
-#pragma once
+ï»¿#ifndef _MEMORY_POOL_INNER_H_INCLUDED_
+#define _MEMORY_POOL_INNER_H_INCLUDED_
 
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 #define mp_print printf
-#define MP_MAX_SIZE (120 * 1024 * 1024)
 
-#define os_malloc malloc
-#define os_free free
+/**
+ * æœ€å¤§æ”¯æŒ1Gå†…å­˜çš„ç®¡ç†
+ */
+#define MP_MAX_SIZE (1024 * 1024 * 1024)
 
-#define MP_ALIGN_SIZE (1024)
-#define MP_MEMORY_SIZE_ALIGN(size) (((size) + MP_ALIGN_SIZE - 1) / MP_ALIGN_SIZE * MP_ALIGN_SIZE)
+//æœ¬å†…å­˜æ± å‡æŒ‰16å­—èŠ‚å¯¹é½
+#define MP_CACHELINE_SIZE (16)
 
 #define SEG_ITEM_MAGIC 0x12345678
 
 #define STAT_IN_USE (1 << 0)
 #define STAT_IN_FREE (1 << 1)
 
-#define SEG_ITEM_INVALID_VALUE -1
-
+#define SEG_ITEM_INVALID_VALUE (-1)
 
 typedef struct seg_item {
-	//±ØĞë·Å½á¹¹Ìå×îÇ°Ãæ£¬ºÍseg_head±£³ÖÒ»ÖÂ
-	seg_item *free_list_prev;	//¿ÕÏĞÄÚ´æÁ´±í
-	seg_item *free_list_next;	//¿ÕÏĞÄÚ´æÁ´±í
+	//å¿…é¡»æ”¾ç»“æ„ä½“æœ€å‰é¢ï¼Œå’Œseg_headä¿æŒä¸€è‡´
+	seg_item *free_list_prev;	//ç©ºé—²å†…å­˜é“¾è¡¨
+	seg_item *free_list_next;	//ç©ºé—²å†…å­˜é“¾è¡¨
 
 	uint32_t magic;
 	uint32_t state;
 
-	uint32_t linear_addr_offset_start;	//µ±Ç°seg¹ÜÀíÄÚ´æ¶ÎµÄ¿ªÊ¼ÏßĞÔµØÖ·£¬°üº¬seg½á¹¹Ìå´óĞ¡ÔÚÄÚ
-	uint32_t linear_addr_offset_end;	//µ±Ç°seg¹ÜÀíÄÚ´æ¶ÎµÄ½áÊøÏßĞÔµØÖ·£¬°üº¬seg½á¹¹Ìå´óĞ¡ÔÚÄÚ
+	uint32_t linear_addr_offset_start;	//å½“å‰segç®¡ç†å†…å­˜æ®µçš„å¼€å§‹çº¿æ€§åœ°å€ï¼ŒåŒ…å«segç»“æ„ä½“å¤§å°åœ¨å†…
+	uint32_t linear_addr_offset_end;	//å½“å‰segç®¡ç†å†…å­˜æ®µçš„ç»“æŸçº¿æ€§åœ°å€ï¼ŒåŒ…å«segç»“æ„ä½“å¤§å°åœ¨å†…
 
-	seg_item *linear_addr_list_prev;	//ÏßĞÔµØÖ·Á´±í
-	seg_item *linear_addr_list_next;	//ÏßĞÔµØÖ·Á´±í
+	seg_item *linear_addr_list_prev;	//çº¿æ€§åœ°å€é“¾è¡¨
+	seg_item *linear_addr_list_next;	//çº¿æ€§åœ°å€é“¾è¡¨
 } seg_item;
 
 typedef struct seg_head {
-	seg_item *free_list_prev;	//¿ÕÏĞÄÚ´æÁ´±í
+	seg_item *free_list_prev;	//ç©ºé—²å†…å­˜é“¾è¡¨
 	seg_item *free_list_next;
 } seg_head;
 
 typedef struct memory_pool{
+	bool thread_safe;
 	uint32_t memory_max_size;
 	uint32_t memory_max_order;
 	uint8_t *memory_addr;
@@ -49,6 +51,11 @@ typedef struct memory_pool{
 	seg_head *seg_head_arr;
 } memory_pool;
 
-uint32_t get_align_order(uint32_t size);
-void check_meta_running_state(memory_pool *pool);
-void check_meta_complete_state(memory_pool *pool);
+
+/**
+ * éƒ¨åˆ†é‡Šæ”¾çš„æœ€å°å­—èŠ‚ï¼Œå¦‚æœå°äºè¿™ä¸ªå­—èŠ‚ï¼Œé‡Šæ”¾ä¹‹åéƒ½ä¸å¤Ÿå­˜æ”¾ä¸€ä¸ªseg_itemï¼Œ
+ * å¯¼è‡´æ— æ³•ç®¡ç†ï¼Œå› æ­¤åšéƒ¨åˆ†é‡Šæ”¾æ—¶ï¼Œå¿…é¡»å¤§äºè¿™ä¸ªå­—èŠ‚æ•°ã€‚
+ */
+#define PART_FREE_MIN_SIZE (sizeof(seg_item))
+
+#endif

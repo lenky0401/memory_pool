@@ -1,4 +1,4 @@
-
+ï»¿
 #include <stdlib.h>
 #include <assert.h>
 #include <errno.h>
@@ -9,146 +9,9 @@
 #include "memory_pool_inner.h"
 #include "memory_pool.h"
 
-uint32_t get_align_order(uint32_t size)
-{
-	assert(size > 0);
+#include "memory_common.h"
 
-	uint32_t num = (size + MP_ALIGN_SIZE - 1) / MP_ALIGN_SIZE;
-	assert(num > 0);
-	if (num == 1) {
-		return 0;
-	}
-
-	uint32_t order = 0;
-	//Ëã2µÄÃİ£¬¹Ì¶¨Öµ
-	num = (num + 1) / 2 * 2;
-	while (num > 1) {
-		num = num >> 1;
-		order++;
-	}
-
-	return order;
-}
-
-static uint32_t get_seg_item_size(seg_item *item)
-{
-	assert(item != NULL);
-	uint32_t size = item->linear_addr_offset_end - item->linear_addr_offset_start;
-	assert(size >= 0);
-	return size;
-}
-
-static void check_linear_meta_running_state(memory_pool *pool)
-{
-	seg_item *head = (seg_item *)pool->memory_addr;
-
-	uint32_t size = 0;
-	seg_item *item = head;
-	do {
-		assert(item->magic == SEG_ITEM_MAGIC);
-		assert(item->state == STAT_IN_USE || item->state == STAT_IN_FREE);
-
-		assert(item->linear_addr_list_prev->linear_addr_offset_end == item->linear_addr_offset_start ||
-			(item->linear_addr_list_prev->linear_addr_offset_end == pool->memory_max_size &&
-				(item->linear_addr_offset_start == 0)));
-
-		assert(item->linear_addr_list_next->linear_addr_offset_start == item->linear_addr_offset_end ||
-			(item->linear_addr_list_next->linear_addr_offset_start == 0 &&
-				(item->linear_addr_offset_end == pool->memory_max_size)));
-
-		size += get_seg_item_size(item);
-
-		item = item->linear_addr_list_next;
-	} while (item != head);
-	assert(size == pool->memory_max_size);
-
-	size = 0;
-	item = head;
-	do {
-		assert(item->magic == SEG_ITEM_MAGIC);
-		assert(item->state == STAT_IN_USE || item->state == STAT_IN_FREE);
-
-		assert(item->linear_addr_list_prev->linear_addr_offset_end == item->linear_addr_offset_start ||
-			(item->linear_addr_list_prev->linear_addr_offset_end == pool->memory_max_size &&
-				(item->linear_addr_offset_start == 0)));
-
-		assert(item->linear_addr_list_next->linear_addr_offset_start == item->linear_addr_offset_end ||
-			(item->linear_addr_list_next->linear_addr_offset_start == 0 &&
-				(item->linear_addr_offset_end == pool->memory_max_size)));
-
-		size += get_seg_item_size(item);
-
-		item = item->linear_addr_list_prev;
-	} while (item != head);
-	assert(size == pool->memory_max_size);
-}
-
-void check_free_meta_running_state(memory_pool *pool)
-{
-	seg_item *head, *item;
-	uint32_t order;
-
-	for (uint32_t i = 0; i <= pool->memory_max_order; i++) {
-
-		head = (seg_item *)&(pool->seg_head_arr[i]);
-		item = head->free_list_next;
-		while (item != head) {
-			assert(item->magic == SEG_ITEM_MAGIC);
-			assert(item->state == STAT_IN_FREE);
-
-			order = get_align_order(get_seg_item_size(item));
-			assert(order == i);
-
-			item = item->free_list_next;
-		}
-
-		item = head->free_list_prev;
-		while (item != head) {
-			assert(item->magic == SEG_ITEM_MAGIC);
-			assert(item->state == STAT_IN_FREE);
-
-			order = get_align_order(get_seg_item_size(item));
-			assert(order == i);
-
-			item = item->free_list_prev;
-		}
-	}
-}
-
-void check_meta_running_state(memory_pool *pool)
-{
-	check_linear_meta_running_state(pool);
-	check_free_meta_running_state(pool);
-}
-
-//¼ì²éÔªĞÅÏ¢ÊÇÍêÕû×´Ì¬
-void check_meta_complete_state(memory_pool *pool)
-{
-	seg_item *head = (seg_item *)pool->memory_addr;
-	assert(get_seg_item_size(head) == pool->memory_max_size);
-	assert(head->magic == SEG_ITEM_MAGIC);
-	assert(head->state == STAT_IN_FREE);
-	assert(head->linear_addr_list_next == head && head->linear_addr_list_prev == head);
-
-	uint32_t order = get_align_order(get_seg_item_size(head));
-	seg_item *free_head = (seg_item *)&(pool->seg_head_arr[order]);
-	assert(free_head->free_list_next == head);
-	assert(free_head->free_list_prev == head);
-	assert(head->free_list_next == free_head);
-	assert(head->free_list_prev == free_head);
-
-	for (uint32_t i = 0; i <= pool->memory_max_order; i++) {
-		if (i == order) {
-			continue;
-		}
-
-		free_head = (seg_item *)&(pool->seg_head_arr[i]);
-		assert(free_head->free_list_next == free_head);
-		assert(free_head->free_list_prev == free_head);
-	}
-}
-
-void seg_free_order_add(memory_pool *pool, seg_item *item)
+static void seg_free_order_add(memory_pool *pool, seg_item *item)
 {
 	uint32_t order = get_align_order(get_seg_item_size(item));
 
@@ -184,22 +47,22 @@ memory_pool* memory_pool_create(uint32_t size, bool thread_safe)
 		mp_print("para size is error: %d", size);
 		return NULL;
 	}
-	size = MP_MEMORY_SIZE_ALIGN(size);
 
-	pool = (memory_pool *)os_malloc(sizeof(memory_pool));
+	pool = (memory_pool *)os_malloc_align(sizeof(memory_pool));
 	if (!pool) {
 		return NULL;
 	}
 	memset(pool, 0, sizeof(memory_pool));
 
+	pool->thread_safe = thread_safe;
 	pool->memory_max_size = size;
-	pool->memory_addr = (uint8_t *)os_malloc(size);
+	pool->memory_addr = (uint8_t *)os_malloc_align(size);
 	if (!pool->memory_addr) {
 		goto err;
 	}
 
 	pool->memory_max_order = get_align_order(size);
-	pool->seg_head_arr = (seg_head *)os_malloc((pool->memory_max_order + 1)
+	pool->seg_head_arr = (seg_head *)os_malloc_align((pool->memory_max_order + 1)
 		* sizeof(seg_head));
 	if (!pool->seg_head_arr) {
 		goto err;
@@ -232,14 +95,14 @@ void memory_pool_destroy(memory_pool *pool)
 	}
 
 	if (pool->seg_head_arr) {
-		os_free(pool->seg_head_arr);
+		os_free_align(pool->seg_head_arr);
 	}
 
 	if (pool->memory_addr) {
-		os_free(pool->memory_addr);
+		os_free_align(pool->memory_addr);
 	}
 
-	os_free(pool);
+	os_free_align(pool);
 }
 
 void* memory_pool_malloc(memory_pool *pool, uint32_t size)
@@ -248,10 +111,10 @@ void* memory_pool_malloc(memory_pool *pool, uint32_t size)
 		return NULL;
 	}
 	if (pool == NULL || size > MP_MAX_SIZE) {
-		return os_malloc(size);
+		return os_malloc_align(size);
 	}
 
-	uint32_t need_size = MP_MEMORY_SIZE_ALIGN(size + sizeof(seg_item));
+	uint32_t need_size = size + sizeof(seg_item) + MEM_ADDR_ALIGN_PADDING;
 	uint32_t need_order = get_align_order(need_size);
 	for (uint32_t curt_order = need_order; curt_order <= pool->memory_max_order; curt_order++) {
 
@@ -271,22 +134,22 @@ void* memory_pool_malloc(memory_pool *pool, uint32_t size)
 			item = (seg_item *)item->free_list_next;
 		}
 
-		//»¹ÊÇÃ»ÕÒµ½¿ÉÓÃ¿Õ¼ä
+		//è¿˜æ˜¯æ²¡æ‰¾åˆ°å¯ç”¨ç©ºé—´
 		if (item == (seg_item *)head) {
 			continue;
 		}
 
-		//ÏÈ´ÓfreeÁ´±íÀï²ğ³öÀ´
+		//å…ˆä»freeé“¾è¡¨é‡Œæ‹†å‡ºæ¥
 		item->free_list_next->free_list_prev = item->free_list_prev;
 		item->free_list_prev->free_list_next = item->free_list_next;
 
-		//Èç¹û´óĞ¡¸ÕºÍ×ã¹»£¬Ö±½Ó·µ»Ø
+		//å¦‚æœå¤§å°åˆšå’Œè¶³å¤Ÿï¼Œç›´æ¥è¿”å›
 		if (get_seg_item_size(item) == need_size) {
 			item->state = STAT_IN_USE;
 			return item + 1;
 		}
 
-		//Èç¹ûÓĞ¶àµÄ¿Õ¼ä£¬Ğè·Ö³öÀ´
+		//å¦‚æœæœ‰å¤šçš„ç©ºé—´ï¼Œéœ€åˆ†å‡ºæ¥
 		assert(get_seg_item_size(item) > need_size);
 		seg_item *ret_item = item;
 		item = (seg_item *)((uint8_t *)ret_item + need_size);
@@ -302,18 +165,18 @@ void* memory_pool_malloc(memory_pool *pool, uint32_t size)
 		item->state = STAT_IN_FREE;
 		item->magic = SEG_ITEM_MAGIC;
 
-		//·Ö³öÀ´µÄ¿Õ¼ä±£´æµ½freeÁ´±í
+		//åˆ†å‡ºæ¥çš„ç©ºé—´ä¿å­˜åˆ°freeé“¾è¡¨
 		seg_free_order_add(pool, item);
 
-		//·µ»Ø
+		//è¿”å›
 		ret_item->state = STAT_IN_USE;
-		return ret_item + 1;
+		return mem_addr_align(ret_item + 1);
 	}
 
-	return os_malloc(size);
+	return os_malloc_align(size);
 }
 
-void memory_pool_free_inner(memory_pool *pool, seg_item *curt)
+static void memory_pool_free_inner(memory_pool *pool, seg_item *curt)
 {
 	assert(pool);
 	assert(curt);
@@ -338,84 +201,85 @@ void memory_pool_free_inner(memory_pool *pool, seg_item *curt)
 	bool next_merge = next != curt && next->state == curt->state &&
 		next->linear_addr_offset_start == curt->linear_addr_offset_end;
 
-	//ÓëÇ°ºó¿é¶¼ÄÜºÏ²¢
+	//ä¸å‰åå—éƒ½èƒ½åˆå¹¶
 	if (prev_merge && next_merge)
 	{
-		//°ÑÉÏÒ»¿éµÄ¿Õ¼äÀ­´ó
+		//æŠŠä¸Šä¸€å—çš„ç©ºé—´æ‹‰å¤§
 		prev->linear_addr_offset_end = next->linear_addr_offset_end;
 
-		//°Ñµ±Ç°¿éºÍÏÂÒ»¿é´ÓlinearÁ´±íÉ¾³ı
+		//æŠŠå½“å‰å—å’Œä¸‹ä¸€å—ä»linearé“¾è¡¨åˆ é™¤
 		prev->linear_addr_list_next = next->linear_addr_list_next;
 		next->linear_addr_list_next->linear_addr_list_prev = prev;
 
-		//°ÑÉÏÒ»¿éºÍÏÂÒ»¿é¶¼´ÓfreeÁ´±íÉ¾³ı
+		//æŠŠä¸Šä¸€å—å’Œä¸‹ä¸€å—éƒ½ä»freeé“¾è¡¨åˆ é™¤
 		prev->free_list_prev->free_list_next = prev->free_list_next;
 		prev->free_list_next->free_list_prev = prev->free_list_prev;
 		next->free_list_prev->free_list_next = next->free_list_next;
 		next->free_list_next->free_list_prev = next->free_list_prev;
 
-		//°ÑÉÏÒ»¿é¼ÓÈëfreeÁ´±í
+		//æŠŠä¸Šä¸€å—åŠ å…¥freeé“¾è¡¨
 		seg_free_order_add(pool, prev);
 	}
 
-	//ÓëÇ°¿éÄÜºÏ²¢
+	//ä¸å‰å—èƒ½åˆå¹¶
 	else if (prev_merge)
 	{
-		//°ÑÉÏÒ»¿éµÄ¿Õ¼äÀ­´ó
+		//æŠŠä¸Šä¸€å—çš„ç©ºé—´æ‹‰å¤§
 		prev->linear_addr_offset_end = curt->linear_addr_offset_end;
 
-		//°Ñµ±Ç°¿é´ÓlinearÁ´±íÉ¾³ı
+		//æŠŠå½“å‰å—ä»linearé“¾è¡¨åˆ é™¤
 		prev->linear_addr_list_next = curt->linear_addr_list_next;
 		curt->linear_addr_list_next->linear_addr_list_prev = prev;
 
-		//°ÑÉÏÒ»¿é´ÓfreeÁ´±íÉ¾³ı
+		//æŠŠä¸Šä¸€å—ä»freeé“¾è¡¨åˆ é™¤
 		prev->free_list_prev->free_list_next = prev->free_list_next;
 		prev->free_list_next->free_list_prev = prev->free_list_prev;
 
-		//°ÑÉÏÒ»¿é¼ÓÈëfreeÁ´±í
+		//æŠŠä¸Šä¸€å—åŠ å…¥freeé“¾è¡¨
 		seg_free_order_add(pool, prev);
 	}
 
-	//Óëºó¿éÄÜºÏ²¢
+	//ä¸åå—èƒ½åˆå¹¶
 	else if (next_merge)
 	{
-		//°Ñµ±Ç°¿éµÄ¿Õ¼äÀ­´ó
+		//æŠŠå½“å‰å—çš„ç©ºé—´æ‹‰å¤§
 		curt->linear_addr_offset_end = next->linear_addr_offset_end;
 
-		//°ÑÏÂÒ»¿é´ÓlinearÁ´±íÉ¾³ı
+		//æŠŠä¸‹ä¸€å—ä»linearé“¾è¡¨åˆ é™¤
 		curt->linear_addr_list_next = next->linear_addr_list_next;
 		next->linear_addr_list_next->linear_addr_list_prev = curt;
 
-		//°ÑÏÂÒ»¿é´ÓfreeÁ´±íÉ¾³ı
+		//æŠŠä¸‹ä¸€å—ä»freeé“¾è¡¨åˆ é™¤
 		next->free_list_prev->free_list_next = next->free_list_next;
 		next->free_list_next->free_list_prev = next->free_list_prev;
 
-		//°Ñµ±Ç°¿é¼ÓÈëfreeÁ´±í
+		//æŠŠå½“å‰å—åŠ å…¥freeé“¾è¡¨
 		seg_free_order_add(pool, curt);
 	}
 
-	//ÓëÇ°ºó¿é¶¼²»ÄÜºÏ²¢
+	//ä¸å‰åå—éƒ½ä¸èƒ½åˆå¹¶
 	else {
-		//°Ñµ±Ç°¿é¼ÓÈëlinearÁ´±í
+		//æŠŠå½“å‰å—åŠ å…¥linearé“¾è¡¨
 		prev->linear_addr_list_next = curt;
 		curt->linear_addr_list_prev = prev;
 		curt->linear_addr_list_next = next;
 		next->linear_addr_list_prev = curt;
 
-		//°Ñµ±Ç°¿é¼ÓÈëfreeÁ´±í
+		//æŠŠå½“å‰å—åŠ å…¥freeé“¾è¡¨
 		seg_free_order_add(pool, curt);
 	}
 }
 
 void memory_pool_free(memory_pool *pool, void *ptr)
 {
-	//²»ÔÚÄÚ´æ³Ø·¶Î§Àï£¬Ö±½ÓÊÍ·Å
+	//ä¸åœ¨å†…å­˜æ± èŒƒå›´é‡Œï¼Œç›´æ¥é‡Šæ”¾
 	if (!is_memory_pool_addr(pool, ptr)) {
-		os_free(ptr);
+		os_free_align(ptr);
 		return;
 	}
 
-	seg_item *curt = (seg_item *)((uint8_t *)ptr - sizeof(seg_item));
+	void *ptr_ori = mem_addr_ori(ptr);
+	seg_item *curt = (seg_item *)((uint8_t *)ptr_ori - sizeof(seg_item));
 	assert(curt->magic == SEG_ITEM_MAGIC);
 	assert(curt->state == STAT_IN_USE);
 
@@ -424,30 +288,30 @@ void memory_pool_free(memory_pool *pool, void *ptr)
 
 int memory_pool_part_free(memory_pool *pool, void *ptr, part_info_array *info)
 {
-	//²ÎÊı´íÎó
+	//å‚æ•°é”™è¯¯
 	if (!pool || !ptr || !info) {
 		return PART_FREE_RET_Bad_parameter;
 	}
 
-	//²»ÔÚÄÚ´æ³Ø·¶Î§Àï£¬²»Ö§³Ö²¿·ÖÊÍ·Å
+	//ä¸åœ¨å†…å­˜æ± èŒƒå›´é‡Œï¼Œä¸æ”¯æŒéƒ¨åˆ†é‡Šæ”¾
 	if (!is_memory_pool_addr(pool, ptr)) {
 		return PART_FREE_RET_Not_Supported;
 	}
 
-	//²ÎÊı´íÎó
-	//1£¬²¿·ÖÄÚ´æ¸öÊıÊÇ·ñ´íÎó
+	//å‚æ•°é”™è¯¯
+	//1ï¼Œéƒ¨åˆ†å†…å­˜ä¸ªæ•°æ˜¯å¦é”™è¯¯
 	if (info->num <= 0 || info->num > PART_INFO_MAX_NUM) {
 		return PART_FREE_RET_Bad_partinfo;
 	}
-	//2£¬²¿·ÖÄÚ´æÌ«Ğ¡»ò²»ÔÚÄÚ´æ³Ø·¶Î§Àï
+	//2ï¼Œéƒ¨åˆ†å†…å­˜å¤ªå°æˆ–ä¸åœ¨å†…å­˜æ± èŒƒå›´é‡Œ
 	for (int i = 0; i < info->num; i++) {
 		void* part_ptr = info->part_arr[i].part_ptr;
 		int32_t part_size = info->part_arr[i].part_size;
-		if (part_size < MP_ALIGN_SIZE || !in_memory_pool_range(pool, part_ptr, part_size)) {
+		if (part_size < PART_FREE_MIN_SIZE || !in_memory_pool_range(pool, part_ptr, part_size)) {
 			return PART_FREE_RET_Bad_partinfo;
 		}
 	}
-	//3£¬²¿·ÖÄÚ´æÖ®¼äÊÇ·ñÓĞÏà»¥ÖØµş
+	//3ï¼Œéƒ¨åˆ†å†…å­˜ä¹‹é—´æ˜¯å¦æœ‰ç›¸äº’é‡å 
 	for (int i = 0; i < info->num; i++) {
 		uint64_t i_start = (uint64_t)info->part_arr[i].part_ptr;
 		uint64_t i_end = i_start + info->part_arr[i].part_size;
@@ -455,10 +319,10 @@ int memory_pool_part_free(memory_pool *pool, void *ptr, part_info_array *info)
 			uint64_t j_start = (uint64_t)info->part_arr[j].part_ptr;
 			uint64_t j_end = j_start + info->part_arr[j].part_size;
 			/**
-			 * ²»ÖØµşµÄÇé¿ö£º
-			 * 1£¬Ïß¶Î1µÄÖÕµãÔÚÏß¶Î2µÄÊ¼µãÖ®Ç°£¬»ò
-			 * 2£¬Ïß¶Î2µÄÖÕµãÔÚÏß¶Î1µÄÊ¼µãÖ®Ç°¡£
-			 * Ïà·´Çé¿öÔòÊÇÓĞÖØµş£¬ÓĞÖØµşÔò·µ»Ø´íÎó¡£
+			 * ä¸é‡å çš„æƒ…å†µï¼š
+			 * 1ï¼Œçº¿æ®µ1çš„ç»ˆç‚¹åœ¨çº¿æ®µ2çš„å§‹ç‚¹ä¹‹å‰ï¼Œæˆ–
+			 * 2ï¼Œçº¿æ®µ2çš„ç»ˆç‚¹åœ¨çº¿æ®µ1çš„å§‹ç‚¹ä¹‹å‰ã€‚
+			 * ç›¸åæƒ…å†µåˆ™æ˜¯æœ‰é‡å ï¼Œæœ‰é‡å åˆ™è¿”å›é”™è¯¯ã€‚
 			 */
 			if (!(i_end <= j_start || j_end <= i_start)) {
 				return PART_FREE_RET_Bad_partinfo;
@@ -466,11 +330,12 @@ int memory_pool_part_free(memory_pool *pool, void *ptr, part_info_array *info)
 		}
 	}
 
-	seg_item *head = (seg_item *)((uint8_t *)ptr - sizeof(seg_item));
+	void *ptr_ori = mem_addr_ori(ptr);
+	seg_item *head = (seg_item *)((uint8_t *)ptr_ori - sizeof(seg_item));
 	assert(head->magic == SEG_ITEM_MAGIC);
 	assert(head->state == STAT_IN_USE);
 
-	//¿ªÊ¼½øĞĞ²¿·ÖÄÚ´æÊÍ·Å
+	//å¼€å§‹è¿›è¡Œéƒ¨åˆ†å†…å­˜é‡Šæ”¾
 	for (int i = 0; i < info->num; i++) {
 		void* part_ptr = info->part_arr[i].part_ptr;
 		int32_t part_size = info->part_arr[i].part_size;

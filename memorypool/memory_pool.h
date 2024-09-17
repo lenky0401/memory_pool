@@ -1,61 +1,79 @@
-#pragma once
+ï»¿#ifndef _MEMORY_POOL_H_INCLUDED_
+#define _MEMORY_POOL_H_INCLUDED_
 
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 /**
- * @brief ´´½¨ÄÚ´æ³Ø
- * @param size ÄÚ´æ³Ø´óĞ¡£¬µ¥Î»Îª×Ö½Ú
- * @param thread_safe ÊÇ·ñÏß³Ì°²È«
- * @return ÄÚ´æ³ØÖ¸Õë
+ * @brief åˆ›å»ºå†…å­˜æ± 
+ * @param size å†…å­˜æ± å¤§å°ï¼Œå•ä½ä¸ºå­—èŠ‚
+ * @param thread_safe æ˜¯å¦çº¿ç¨‹å®‰å…¨
+ * @return å†…å­˜æ± æŒ‡é’ˆ
  */
 memory_pool* memory_pool_create(uint32_t size, bool thread_safe);
 
 /**
- * @brief Ïú»ÙÄÚ´æ³Ø
- * @param pool ÄÚ´æ³ØÖ¸Õë
+ * @brief é”€æ¯å†…å­˜æ± 
+ * @param pool å†…å­˜æ± æŒ‡é’ˆ
  * @return void
  */
 void memory_pool_destroy(memory_pool *pool);
 
 /**
- * @brief ÄÚ´æÉêÇë
- * @param pool ÄÚ´æ³ØÖ¸Õë
- * @param size ÉêÇëÄÚ´æ´óĞ¡£¬µ¥Î»Îª×Ö½Ú
- * @return ÉêÇëµÄÄÚ´æÖ¸Õë£¬ÉêÇëÊ§°Ü·µ»ØNULL
+ * @brief å†…å­˜ç”³è¯·
+ * @param pool å†…å­˜æ± æŒ‡é’ˆ
+ * @param size ç”³è¯·å†…å­˜å¤§å°ï¼Œå•ä½ä¸ºå­—èŠ‚
+ * @return ç”³è¯·çš„å†…å­˜æŒ‡é’ˆï¼Œç”³è¯·å¤±è´¥è¿”å›NULL
  */
 void* memory_pool_malloc(memory_pool *pool, uint32_t size);
 
 /**
- * @brief ÄÚ´æÊÍ·Å
- * @param pool ÄÚ´æ³ØÖ¸Õë
- * @param ptr ´ıÊÍ·ÅµÄÄÚ´æÖ¸Õë
+ * @brief å†…å­˜é‡Šæ”¾
+ * @param pool å†…å­˜æ± æŒ‡é’ˆ
+ * @param ptr å¾…é‡Šæ”¾çš„å†…å­˜æŒ‡é’ˆ
  * @return void
  */
 void memory_pool_free(memory_pool *pool, void *ptr);
 
 /**
- * @brief ÄÚ´æ²¿·ÖÊÍ·Å
- * @param pool ÄÚ´æ³ØÖ¸Õë
- * @param ptr ´ı²¿·ÖÊÍ·ÅµÄÄÚ´æÍ·Ö¸Õë
- * @param info ´ı²¿·ÖÊÍ·ÅµÄÄÚ´æÖ¸Õë
- * @return ¼û£ºPART_FREE_RET_*
- *         ÊÍ·Å³É¹¦ºó£¬ÇĞ·ÖµÄ²¿·ÖÄÚ´æ¿é´æÔÚ²ÎÊıinfoÀï·µ»Ø³öÀ´¡£
+ * @brief å†…å­˜éƒ¨åˆ†é‡Šæ”¾
+ * @param pool å†…å­˜æ± æŒ‡é’ˆ
+ * @param ptr å¾…éƒ¨åˆ†é‡Šæ”¾çš„å†…å­˜å¤´æŒ‡é’ˆ
+ * @param info å¾…éƒ¨åˆ†é‡Šæ”¾çš„å†…å­˜æŒ‡é’ˆ
+ * @return è§ï¼šPART_FREE_RET_*
+ *         é‡Šæ”¾æˆåŠŸåï¼Œåˆ‡åˆ†çš„éƒ¨åˆ†å†…å­˜å—å­˜åœ¨å‚æ•°infoé‡Œè¿”å›å‡ºæ¥ã€‚
  */
-//Ò»´Î×î¶àÊÍ·Å8¿é²¿·ÖÄÚ´æ
+//ä¸€æ¬¡æœ€å¤šé‡Šæ”¾8å—éƒ¨åˆ†å†…å­˜
 #define PART_INFO_MAX_NUM (8)
 typedef struct part_info {
-	void* part_ptr;		//²¿·ÖÄÚ´æµÄÆğÊ¼µØÖ·
-	int32_t part_size;	//²¿·ÖÄÚ´æµÄ´óĞ¡£¬±ØĞë´óÓÚµÈÓÚMP_ALIGN_SIZE
+	void* part_ptr;		//éƒ¨åˆ†å†…å­˜çš„èµ·å§‹åœ°å€
+	int32_t part_size;	//éƒ¨åˆ†å†…å­˜çš„å¤§å°ï¼Œå¿…é¡»å¤§äºç­‰äºPART_FREE_MIN_SIZE
 } part_info;
 typedef struct part_info_array {
-	int32_t num;	//ĞèÒªÊÍ·Å¼¸¿é²¿·ÖÄÚ´æ
-	part_info part_arr[PART_INFO_MAX_NUM + 1];	//Ã¿¿é²¿·ÖÄÚ´æµÄÆğÊ¼µØÖ·Ö¸Õë
-	                                    //ÊÍ·ÅÖĞ¼äÄÚ´æºó£¬·µ»ØµÄÄÚ´æ±»ÇĞ¿ª£¬Òò´ËÊıÁ¿+1
+	int32_t num;	//éœ€è¦é‡Šæ”¾å‡ å—éƒ¨åˆ†å†…å­˜
+	part_info part_arr[PART_INFO_MAX_NUM + 1];	//æ¯å—éƒ¨åˆ†å†…å­˜çš„èµ·å§‹åœ°å€æŒ‡é’ˆ
+	                                    //é‡Šæ”¾ä¸­é—´å†…å­˜åï¼Œè¿”å›çš„å†…å­˜è¢«åˆ‡å¼€ï¼Œå› æ­¤æ•°é‡+1
 } part_info_array;
 #define PART_FREE_RET_Ok 0
 #define PART_FREE_RET_Not_Supported 1
 #define PART_FREE_RET_Bad_parameter 2
 #define PART_FREE_RET_Bad_partinfo 3
 int memory_pool_part_free(memory_pool *pool, void *ptr, part_info_array *info);
+
+/**
+ * @brief æ£€æŸ¥è¿è¡Œè¿‡ç¨‹ä¸­ï¼Œå…ƒä¿¡æ¯çŠ¶æ€æ˜¯å¦æ­£ç¡®
+ * @param pool å†…å­˜æ± æŒ‡é’ˆ
+ * @return void
+ */
+void check_meta_running_state(memory_pool *pool);
+
+/**
+ * @brief æ£€æŸ¥å†…å­˜å®Œå…¨é‡Šæ”¾åï¼Œå…ƒä¿¡æ¯å®Œæ•´çŠ¶æ€æ˜¯å¦æ­£ç¡®
+ * @param pool å†…å­˜æ± æŒ‡é’ˆ
+ * @return void
+ */
+void check_meta_complete_state(memory_pool *pool);
+
+
+#endif

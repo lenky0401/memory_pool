@@ -1,4 +1,4 @@
-#include <stdio.h>
+﻿#include <stdio.h>
 #include <assert.h>
 #include <errno.h>
 #include <malloc.h>
@@ -6,18 +6,18 @@
 #include "memory_pool_inner.h"
 #include "memory_pool.h"
 
-void test()
-{
-	assert(get_align_order(64) == 0);
-	assert(get_align_order(32) == 0);
-	assert(get_align_order(64) == 0);
-}
+#include "memory_common.h"
+
+#include "unit_test.h"
+
 
 int main()
 {
-	test();
+	test_os_malloc_free();
 
-	memory_pool *pool = memory_pool_create(10000, 1);
+	test_get_align_order();
+
+	memory_pool *pool = memory_pool_create(10000, false);
 
 	check_meta_running_state(pool);
 	check_meta_complete_state(pool);
