@@ -17,8 +17,12 @@
 
 #define SEG_ITEM_MAGIC 0x12345678
 
-#define STAT_IN_USE (1 << 0)
-#define STAT_IN_FREE (1 << 1)
+//空闲中
+#define STATE_FREE (1 << 0)
+//使用中，没有对齐
+#define STATE_USE_NOTALIGN (1 << 1)
+//使用中，有对齐
+#define STATE_USE_ALIGN (1 << 2)
 
 #define SEG_ITEM_INVALID_VALUE (-1)
 
@@ -50,12 +54,5 @@ typedef struct memory_pool{
 
 	seg_head *seg_head_arr;
 } memory_pool;
-
-
-/**
- * 部分释放的最小字节，如果小于这个字节，释放之后都不够存放一个seg_item，
- * 导致无法管理，因此做部分释放时，必须大于这个字节数。
- */
-#define PART_FREE_MIN_SIZE (sizeof(seg_item))
 
 #endif

@@ -22,7 +22,8 @@ static void check_linear_meta_running_state(memory_pool *pool)
 	seg_item *item = head;
 	do {
 		assert(item->magic == SEG_ITEM_MAGIC);
-		assert(item->state == STAT_IN_USE || item->state == STAT_IN_FREE);
+		assert(item->state == STATE_FREE || item->state == STATE_USE_NOTALIGN
+			|| item->state == STATE_USE_ALIGN);
 
 		assert(item->linear_addr_list_prev->linear_addr_offset_end == item->linear_addr_offset_start ||
 			(item->linear_addr_list_prev->linear_addr_offset_end == pool->memory_max_size &&
@@ -42,7 +43,8 @@ static void check_linear_meta_running_state(memory_pool *pool)
 	item = head;
 	do {
 		assert(item->magic == SEG_ITEM_MAGIC);
-		assert(item->state == STAT_IN_USE || item->state == STAT_IN_FREE);
+		assert(item->state == STATE_FREE || item->state == STATE_USE_NOTALIGN
+			|| item->state == STATE_USE_ALIGN);
 
 		assert(item->linear_addr_list_prev->linear_addr_offset_end == item->linear_addr_offset_start ||
 			(item->linear_addr_list_prev->linear_addr_offset_end == pool->memory_max_size &&
@@ -73,7 +75,7 @@ static void check_free_meta_running_state(memory_pool *pool)
 		item = head->free_list_next;
 		while (item != head) {
 			assert(item->magic == SEG_ITEM_MAGIC);
-			assert(item->state == STAT_IN_FREE);
+			assert(item->state == STATE_FREE);
 
 			order = get_align_order(get_seg_item_size(item));
 			assert(order == i);
@@ -84,7 +86,7 @@ static void check_free_meta_running_state(memory_pool *pool)
 		item = head->free_list_prev;
 		while (item != head) {
 			assert(item->magic == SEG_ITEM_MAGIC);
-			assert(item->state == STAT_IN_FREE);
+			assert(item->state == STATE_FREE);
 
 			order = get_align_order(get_seg_item_size(item));
 			assert(order == i);
@@ -111,7 +113,7 @@ void check_meta_complete_state(memory_pool *pool)
 	seg_item *head = (seg_item *)pool->memory_addr;
 	assert(get_seg_item_size(head) == pool->memory_max_size);
 	assert(head->magic == SEG_ITEM_MAGIC);
-	assert(head->state == STAT_IN_FREE);
+	assert(head->state == STATE_FREE);
 	assert(head->linear_addr_list_next == head && head->linear_addr_list_prev == head);
 
 	uint32_t order = get_align_order(get_seg_item_size(head));

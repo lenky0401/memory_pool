@@ -28,6 +28,7 @@ static void* mem_addr_align(void *addr_ori)
 	return addr_align;
 }
 
+//app拿到的都是对齐后的地址，该函数返回实际分配的地址
 static void* mem_addr_ori(void *addr_align)
 {
 	return ((void**)(addr_align))[-1];
