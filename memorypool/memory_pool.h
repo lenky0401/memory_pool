@@ -34,7 +34,7 @@ void* memory_pool_malloc(memory_pool *pool, uint32_t size);
  * @param ptr 待释放的内存指针
  * @return void
  */
-void memory_pool_free(memory_pool *pool, void *ptr);
+int memory_pool_free(memory_pool *pool, void *ptr);
 
 /**
  * @brief 内存部分释放

@@ -270,12 +270,17 @@ static void memory_pool_free_inner(memory_pool *pool, seg_item *curt)
 	}
 }
 
-void memory_pool_free(memory_pool *pool, void *ptr)
+int memory_pool_free(memory_pool *pool, void *ptr)
 {
+	//参数错误
+	if (!pool || !ptr) {
+		return PART_FREE_RET_Bad_parameter;
+	}
+
 	//不在内存池范围里，直接释放
 	if (!is_memory_pool_addr(pool, ptr)) {
 		os_free_align(ptr);
-		return;
+		return PART_FREE_RET_Ok;
 	}
 
 	void *ptr_ori = mem_addr_ori(ptr);
@@ -284,6 +289,8 @@ void memory_pool_free(memory_pool *pool, void *ptr)
 	assert(curt->state == STAT_IN_USE);
 
 	memory_pool_free_inner(pool, curt);
+
+	return PART_FREE_RET_Ok;
 }
 
 int memory_pool_part_free(memory_pool *pool, void *ptr, part_info_array *info)

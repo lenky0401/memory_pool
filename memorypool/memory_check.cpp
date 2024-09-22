@@ -11,6 +11,9 @@
 
 #include "memory_common.h"
 
+/**
+ * 检查线性地址链表是否正确
+ */
 static void check_linear_meta_running_state(memory_pool *pool)
 {
 	seg_item *head = (seg_item *)pool->memory_addr;
@@ -56,6 +59,9 @@ static void check_linear_meta_running_state(memory_pool *pool)
 	assert(size == pool->memory_max_size);
 }
 
+/**
+ * 检查空闲内存地址段链表是否正确
+ */
 static void check_free_meta_running_state(memory_pool *pool)
 {
 	seg_item *head, *item;
@@ -88,12 +94,18 @@ static void check_free_meta_running_state(memory_pool *pool)
 	}
 }
 
+/**
+ * 检查两个链表是否正确
+ */
 void check_meta_running_state(memory_pool *pool)
 {
 	check_linear_meta_running_state(pool);
 	check_free_meta_running_state(pool);
 }
 
+/**
+ * 在没有内存使用的情况下，元信息需全为初始状态
+ */
 void check_meta_complete_state(memory_pool *pool)
 {
 	seg_item *head = (seg_item *)pool->memory_addr;
