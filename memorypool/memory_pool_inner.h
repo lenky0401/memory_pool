@@ -18,11 +18,9 @@
 #define SEG_ITEM_MAGIC 0x12345678
 
 //空闲中
-#define STATE_FREE (1 << 0)
-//使用中，没有对齐
-#define STATE_USE_NOTALIGN (1 << 1)
-//使用中，有对齐
-#define STATE_USE_ALIGN (1 << 2)
+#define STAT_IN_FREE (1 << 0)
+//使用中
+#define STAT_IN_USE (1 << 1)
 
 #define SEG_ITEM_INVALID_VALUE (-1)
 

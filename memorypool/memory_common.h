@@ -13,6 +13,16 @@
 
 #define MEM_ADDR_ALIGN_PADDING (sizeof(void*) + (MP_CACHELINE_SIZE - 1))
 
+static void* os_malloc(uint32_t size)
+{
+	return malloc(size);
+}
+
+static void os_free(void *ptr)
+{
+	free(ptr);
+}
+
 /**
  * 对addr_ori地址做对齐，调用该函数的地方需确保内存空间足够（需多申请
  * MEM_ADDR_ALIGN_PADDING字节），否则可能导致越界。
@@ -28,7 +38,7 @@ static void* mem_addr_align(void *addr_ori)
 	return addr_align;
 }
 
-//app拿到的都是对齐后的地址，该函数返回实际分配的地址
+//返回实际分配的地址
 static void* mem_addr_ori(void *addr_align)
 {
 	return ((void**)(addr_align))[-1];
@@ -36,7 +46,7 @@ static void* mem_addr_ori(void *addr_align)
 
 static void* os_malloc_align(uint32_t size)
 {
-	char *addr_ori = (char *)malloc(MEM_ADDR_ALIGN_PADDING + size);
+	char *addr_ori = (char *)os_malloc(MEM_ADDR_ALIGN_PADDING + size);
 	if (!addr_ori) {
 		return NULL;
 	}
@@ -46,7 +56,7 @@ static void* os_malloc_align(uint32_t size)
 
 static void os_free_align(void *ptr)
 {
-	free(mem_addr_ori(ptr));
+	os_free(mem_addr_ori(ptr));
 }
 
 static uint32_t get_align_order(uint32_t size)
