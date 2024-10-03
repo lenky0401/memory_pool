@@ -8,9 +8,9 @@
 
 #include "unit_test.h"
 #include "memory_pool_inner.h"
-#include "memory_pool.h"
-
 #include "memory_common.h"
+#include "memory_pool.h"
+#include "memory_check.h"
 
 void test_os_malloc_free()
 {
@@ -127,6 +127,62 @@ void test_part_free()
 		info.part_arr[0].part_size = 100;
 		info.part_arr[1].part_ptr = (uint8_t *)p + 100;
 		info.part_arr[1].part_size = 100;
+
+		int ret = memory_pool_part_free(pool, p, &info);
+		assert(ret == PART_FREE_RET_Ok);
+		check_meta_running_state(pool);
+		for (int i = 0; i < info.num; i++) {
+			memory_pool_free(pool, info.part_arr[i].part_ptr);
+		}
+		check_meta_complete_state(pool);
+	}
+
+	//test 3
+	{
+		void *p = memory_pool_malloc(pool, 2000);
+		assert(p);
+		check_meta_running_state(pool);
+
+		part_info_array info;
+		info.num = 2;
+		info.part_arr[0].part_ptr = (uint8_t *)p + 100;
+		info.part_arr[0].part_size = 100;
+		info.part_arr[1].part_ptr = (uint8_t *)p + 1900;
+		info.part_arr[1].part_size = 100;
+
+		int ret = memory_pool_part_free(pool, p, &info);
+		assert(ret == PART_FREE_RET_Ok);
+		check_meta_running_state(pool);
+		for (int i = 0; i < info.num; i++) {
+			memory_pool_free(pool, info.part_arr[i].part_ptr);
+		}
+		check_meta_complete_state(pool);
+	}
+
+	//test 4
+	{
+		void *p = memory_pool_malloc(pool, 2000);
+		assert(p);
+		check_meta_running_state(pool);
+
+		part_info_array info;
+		info.num = PART_INFO_MAX_NUM;
+		info.part_arr[0].part_ptr = (uint8_t *)p + 1500;
+		info.part_arr[0].part_size = 100;
+		info.part_arr[1].part_ptr = (uint8_t *)p + 1100;
+		info.part_arr[1].part_size = 100;
+		info.part_arr[2].part_ptr = (uint8_t *)p + 500;
+		info.part_arr[2].part_size = 100;
+		info.part_arr[3].part_ptr = (uint8_t *)p + 1300;
+		info.part_arr[3].part_size = 100;
+		info.part_arr[4].part_ptr = (uint8_t *)p + 900;
+		info.part_arr[4].part_size = 100;
+		info.part_arr[5].part_ptr = (uint8_t *)p + 300;
+		info.part_arr[5].part_size = 100;
+		info.part_arr[6].part_ptr = (uint8_t *)p + 700;
+		info.part_arr[6].part_size = 100;
+		info.part_arr[7].part_ptr = (uint8_t *)p + 100;
+		info.part_arr[7].part_size = 100;
 
 		int ret = memory_pool_part_free(pool, p, &info);
 		assert(ret == PART_FREE_RET_Ok);

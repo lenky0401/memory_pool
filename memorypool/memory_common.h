@@ -84,7 +84,7 @@ static uint32_t get_seg_item_size(seg_item *item)
 {
 	assert(item != NULL);
 	uint32_t size = item->linear_addr_offset_end - item->linear_addr_offset_start;
-	assert(size >= 0);
+	assert(size > sizeof(seg_item));
 	return size;
 }
 

@@ -10,6 +10,7 @@
 #include "memory_pool.h"
 
 #include "memory_common.h"
+#include "memory_check.h"
 
 /**
  * 检查线性地址链表是否正确
