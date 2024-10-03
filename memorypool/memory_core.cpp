@@ -390,13 +390,6 @@ int memory_pool_part_free(memory_pool *pool, void *ptr, part_info_array *info)
 	int ret_i = PART_INFO_MAX_NUM;
 	seg_item *curt = NULL;
 
-	//顶头释放？
-	//if (ptr == info->part_arr[0].part_ptr) {
-	//	curt = (seg_item *)((uint8_t *)ptr - sizeof(seg_item));
-	//	assert(curt->magic == SEG_ITEM_MAGIC);
-	//	assert(curt->state == STAT_IN_FREE);
-	//}
-
 	for (int i = info->num - 1; i >= 0 ; i--) {
 		void* part_ptr = info->part_arr[i].part_ptr;
 		int32_t part_size = info->part_arr[i].part_size;
@@ -447,7 +440,7 @@ int memory_pool_part_free(memory_pool *pool, void *ptr, part_info_array *info)
 	}
 
 	//最前面还有一块使用中内存
-	if (head->linear_addr_offset_start < curt->linear_addr_offset_start) {
+	if (head->linear_addr_offset_start + sizeof(seg_item) < curt->linear_addr_offset_start) {
 		info->part_arr[ret_i].part_ptr = (uint8_t *)head + sizeof(seg_item);
 		info->part_arr[ret_i].part_size = head->linear_addr_offset_end -
 			head->linear_addr_offset_start - sizeof(seg_item);
@@ -471,7 +464,6 @@ int memory_pool_part_free(memory_pool *pool, void *ptr, part_info_array *info)
 			info->part_arr[i] = info->part_arr[i + offset];
 		}
 	}
-	
 
 	return PART_FREE_RET_Ok;
 }

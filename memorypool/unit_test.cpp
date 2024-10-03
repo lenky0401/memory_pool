@@ -88,28 +88,55 @@ void test_malloc()
 
 void test_part_free()
 {
+	//start
 	memory_pool *pool = memory_pool_create(10000, false);
 	assert(pool);
 	check_meta_complete_state(pool);
 
-	void *p = memory_pool_malloc(pool, 1000);
-	assert(p);
-	check_meta_running_state(pool);
+	//test 1
+	{
+		void *p = memory_pool_malloc(pool, 1000);
+		assert(p);
+		check_meta_running_state(pool);
 
-	part_info_array info;
-	info.num = 2;
-	info.part_arr[0].part_ptr = (uint8_t *)p + 100;
-	info.part_arr[0].part_size = 100;
-	info.part_arr[1].part_ptr = (uint8_t *)p + 300;
-	info.part_arr[1].part_size = 100;
+		part_info_array info;
+		info.num = 2;
+		info.part_arr[0].part_ptr = (uint8_t *)p + 100;
+		info.part_arr[0].part_size = 100;
+		info.part_arr[1].part_ptr = (uint8_t *)p + 300;
+		info.part_arr[1].part_size = 100;
 
-	int ret = memory_pool_part_free(pool, p, &info);
-	assert(ret == PART_FREE_RET_Ok);
-	check_meta_running_state(pool);
-	for (int i = 0; i < info.num; i++) {
-		memory_pool_free(pool, info.part_arr[i].part_ptr);
+		int ret = memory_pool_part_free(pool, p, &info);
+		assert(ret == PART_FREE_RET_Ok);
+		check_meta_running_state(pool);
+		for (int i = 0; i < info.num; i++) {
+			memory_pool_free(pool, info.part_arr[i].part_ptr);
+		}
+		check_meta_complete_state(pool);
 	}
-	check_meta_complete_state(pool);
 
+	//test 2
+	{
+		void *p = memory_pool_malloc(pool, 2000);
+		assert(p);
+		check_meta_running_state(pool);
+
+		part_info_array info;
+		info.num = 2;
+		info.part_arr[0].part_ptr = (uint8_t *)p;
+		info.part_arr[0].part_size = 100;
+		info.part_arr[1].part_ptr = (uint8_t *)p + 100;
+		info.part_arr[1].part_size = 100;
+
+		int ret = memory_pool_part_free(pool, p, &info);
+		assert(ret == PART_FREE_RET_Ok);
+		check_meta_running_state(pool);
+		for (int i = 0; i < info.num; i++) {
+			memory_pool_free(pool, info.part_arr[i].part_ptr);
+		}
+		check_meta_complete_state(pool);
+	}
+
+	//end
 	memory_pool_destroy(pool);
 }
