@@ -19,7 +19,7 @@ int main()
 
 	test_malloc();
 
-	test_part_free();
+	test_slice_free();
 
 	printf("ok\n");
 	getchar();

@@ -86,7 +86,7 @@ void test_malloc()
 	memory_pool_destroy(pool);
 }
 
-void test_part_free()
+void test_slice_free()
 {
 	//start
 	memory_pool *pool = memory_pool_create(10000, false);
@@ -99,18 +99,18 @@ void test_part_free()
 		assert(p);
 		check_meta_running_state(pool);
 
-		part_info_array info;
+		slice_info_array info;
 		info.num = 2;
-		info.part_arr[0].part_ptr = (uint8_t *)p + 100;
-		info.part_arr[0].part_size = 100;
-		info.part_arr[1].part_ptr = (uint8_t *)p + 300;
-		info.part_arr[1].part_size = 100;
+		info.slice_arr[0].ptr = (uint8_t *)p + 100;
+		info.slice_arr[0].size = 100;
+		info.slice_arr[1].ptr = (uint8_t *)p + 300;
+		info.slice_arr[1].size = 100;
 
-		int ret = memory_pool_part_free(pool, p, &info);
-		assert(ret == PART_FREE_RET_Ok);
+		int ret = memory_pool_slice_free(pool, p, &info);
+		assert(ret == SLICE_FREE_RET_Ok);
 		check_meta_running_state(pool);
 		for (int i = 0; i < info.num; i++) {
-			memory_pool_free(pool, info.part_arr[i].part_ptr);
+			memory_pool_free(pool, info.slice_arr[i].ptr);
 		}
 		check_meta_complete_state(pool);
 	}
@@ -121,18 +121,18 @@ void test_part_free()
 		assert(p);
 		check_meta_running_state(pool);
 
-		part_info_array info;
+		slice_info_array info;
 		info.num = 2;
-		info.part_arr[0].part_ptr = (uint8_t *)p;
-		info.part_arr[0].part_size = 100;
-		info.part_arr[1].part_ptr = (uint8_t *)p + 100;
-		info.part_arr[1].part_size = 100;
+		info.slice_arr[0].ptr = (uint8_t *)p;
+		info.slice_arr[0].size = 100;
+		info.slice_arr[1].ptr = (uint8_t *)p + 100;
+		info.slice_arr[1].size = 100;
 
-		int ret = memory_pool_part_free(pool, p, &info);
-		assert(ret == PART_FREE_RET_Ok);
+		int ret = memory_pool_slice_free(pool, p, &info);
+		assert(ret == SLICE_FREE_RET_Ok);
 		check_meta_running_state(pool);
 		for (int i = 0; i < info.num; i++) {
-			memory_pool_free(pool, info.part_arr[i].part_ptr);
+			memory_pool_free(pool, info.slice_arr[i].ptr);
 		}
 		check_meta_complete_state(pool);
 	}
@@ -143,18 +143,18 @@ void test_part_free()
 		assert(p);
 		check_meta_running_state(pool);
 
-		part_info_array info;
+		slice_info_array info;
 		info.num = 2;
-		info.part_arr[0].part_ptr = (uint8_t *)p + 100;
-		info.part_arr[0].part_size = 100;
-		info.part_arr[1].part_ptr = (uint8_t *)p + 1900;
-		info.part_arr[1].part_size = 100;
+		info.slice_arr[0].ptr = (uint8_t *)p + 100;
+		info.slice_arr[0].size = 100;
+		info.slice_arr[1].ptr = (uint8_t *)p + 1900;
+		info.slice_arr[1].size = 100;
 
-		int ret = memory_pool_part_free(pool, p, &info);
-		assert(ret == PART_FREE_RET_Ok);
+		int ret = memory_pool_slice_free(pool, p, &info);
+		assert(ret == SLICE_FREE_RET_Ok);
 		check_meta_running_state(pool);
 		for (int i = 0; i < info.num; i++) {
-			memory_pool_free(pool, info.part_arr[i].part_ptr);
+			memory_pool_free(pool, info.slice_arr[i].ptr);
 		}
 		check_meta_complete_state(pool);
 	}
@@ -165,30 +165,30 @@ void test_part_free()
 		assert(p);
 		check_meta_running_state(pool);
 
-		part_info_array info;
-		info.num = PART_INFO_MAX_NUM;
-		info.part_arr[0].part_ptr = (uint8_t *)p + 1500;
-		info.part_arr[0].part_size = 100;
-		info.part_arr[1].part_ptr = (uint8_t *)p + 1100;
-		info.part_arr[1].part_size = 100;
-		info.part_arr[2].part_ptr = (uint8_t *)p + 500;
-		info.part_arr[2].part_size = 100;
-		info.part_arr[3].part_ptr = (uint8_t *)p + 1300;
-		info.part_arr[3].part_size = 100;
-		info.part_arr[4].part_ptr = (uint8_t *)p + 900;
-		info.part_arr[4].part_size = 100;
-		info.part_arr[5].part_ptr = (uint8_t *)p + 300;
-		info.part_arr[5].part_size = 100;
-		info.part_arr[6].part_ptr = (uint8_t *)p + 700;
-		info.part_arr[6].part_size = 100;
-		info.part_arr[7].part_ptr = (uint8_t *)p + 100;
-		info.part_arr[7].part_size = 100;
+		slice_info_array info;
+		info.num = SLICE_INFO_MAX_NUM;
+		info.slice_arr[0].ptr = (uint8_t *)p + 1500;
+		info.slice_arr[0].size = 100;
+		info.slice_arr[1].ptr = (uint8_t *)p + 1100;
+		info.slice_arr[1].size = 100;
+		info.slice_arr[2].ptr = (uint8_t *)p + 500;
+		info.slice_arr[2].size = 100;
+		info.slice_arr[3].ptr = (uint8_t *)p + 1300;
+		info.slice_arr[3].size = 100;
+		info.slice_arr[4].ptr = (uint8_t *)p + 900;
+		info.slice_arr[4].size = 100;
+		info.slice_arr[5].ptr = (uint8_t *)p + 300;
+		info.slice_arr[5].size = 100;
+		info.slice_arr[6].ptr = (uint8_t *)p + 700;
+		info.slice_arr[6].size = 100;
+		info.slice_arr[7].ptr = (uint8_t *)p + 100;
+		info.slice_arr[7].size = 100;
 
-		int ret = memory_pool_part_free(pool, p, &info);
-		assert(ret == PART_FREE_RET_Ok);
+		int ret = memory_pool_slice_free(pool, p, &info);
+		assert(ret == SLICE_FREE_RET_Ok);
 		check_meta_running_state(pool);
 		for (int i = 0; i < info.num; i++) {
-			memory_pool_free(pool, info.part_arr[i].part_ptr);
+			memory_pool_free(pool, info.slice_arr[i].ptr);
 		}
 		check_meta_complete_state(pool);
 	}

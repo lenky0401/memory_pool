@@ -11,6 +11,6 @@ void test_get_align_order();
 
 void test_malloc();
 
-void test_part_free();
+void test_slice_free();
 
 #endif

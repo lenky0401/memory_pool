@@ -301,13 +301,13 @@ int memory_pool_free(memory_pool *pool, void *ptr)
 {
 	//参数错误
 	if (!pool || !ptr) {
-		return PART_FREE_RET_Bad_parameter;
+		return SLICE_FREE_RET_Bad_parameter;
 	}
 
 	//不在内存池范围里，直接释放
 	if (!is_memory_pool_addr(pool, ptr)) {
 		os_free(ptr);
-		return PART_FREE_RET_Ok;
+		return SLICE_FREE_RET_Ok;
 	}
 
 	seg_item *curt = (seg_item *)((uint8_t *)ptr - sizeof(seg_item));
@@ -316,49 +316,49 @@ int memory_pool_free(memory_pool *pool, void *ptr)
 
 	memory_pool_free_inner(pool, curt);
 
-	return PART_FREE_RET_Ok;
+	return SLICE_FREE_RET_Ok;
 }
 
-int memory_pool_part_free(memory_pool *pool, void *ptr, part_info_array *info)
+int memory_pool_slice_free(memory_pool *pool, void *ptr, slice_info_array *info)
 {
 	//参数错误
 	if (!pool || !ptr || !info) {
-		return PART_FREE_RET_Bad_parameter;
+		return SLICE_FREE_RET_Bad_parameter;
 	}
 
 	//不在内存池范围里，不支持部分释放
 	if (!is_memory_pool_addr(pool, ptr)) {
-		return PART_FREE_RET_Not_Supported;
+		return SLICE_FREE_RET_Not_Supported;
 	}
 
 	//参数错误
 	//1，部分内存个数是否错误
-	if (info->num <= 0 || info->num > PART_INFO_MAX_NUM) {
-		return PART_FREE_RET_Bad_partinfo;
+	if (info->num <= 0 || info->num > SLICE_INFO_MAX_NUM) {
+		return SLICE_FREE_RET_Bad_sliceinfo;
 	}
 
 	/**
 	 * 2，部分内存太小或不在ptr内存段范围里
-	 * 说明：之所以要大于等于两倍PART_FREE_MIN_SIZE，是因为其自身需要一个PART_FREE_MIN_SIZE，
-	 * 而其后面的使用中内存也需要一个PART_FREE_MIN_SIZE。
+	 * 说明：之所以要大于等于两倍SLICE_FREE_MIN_SIZE，是因为其自身需要一个SLICE_FREE_MIN_SIZE，
+	 * 而其后面的使用中内存也需要一个SLICE_FREE_MIN_SIZE。
 	 */
 	seg_item *head = (seg_item *)((uint8_t *)ptr - sizeof(seg_item));
 	assert(head->magic == SEG_ITEM_MAGIC);
 	assert(head->state == STAT_IN_USE);
 	for (int i = 0; i < info->num; i++) {
-		void* part_ptr = info->part_arr[i].part_ptr;
-		int32_t part_size = info->part_arr[i].part_size;
-		if (part_size < 2 * sizeof(seg_item) || !in_memory_pool_seg_range(pool, head, part_ptr, part_size)) {
-			return PART_FREE_RET_Bad_partinfo;
+		void* ptr = info->slice_arr[i].ptr;
+		int32_t size = info->slice_arr[i].size;
+		if (size < 2 * sizeof(seg_item) || !in_memory_pool_seg_range(pool, head, ptr, size)) {
+			return SLICE_FREE_RET_Bad_sliceinfo;
 		}
 	}
 	//3，部分内存之间是否有相互重叠
 	for (int i = 0; i < info->num; i++) {
-		uint64_t i_start = (uint64_t)info->part_arr[i].part_ptr;
-		uint64_t i_end = i_start + info->part_arr[i].part_size;
+		uint64_t i_start = (uint64_t)info->slice_arr[i].ptr;
+		uint64_t i_end = i_start + info->slice_arr[i].size;
 		for (int j = i + 1; j < info->num; j++) {
-			uint64_t j_start = (uint64_t)info->part_arr[j].part_ptr;
-			uint64_t j_end = j_start + info->part_arr[j].part_size;
+			uint64_t j_start = (uint64_t)info->slice_arr[j].ptr;
+			uint64_t j_end = j_start + info->slice_arr[j].size;
 			/**
 			 * 不重叠的情况：
 			 * 1，线段1的终点在线段2的始点之前，或
@@ -366,39 +366,39 @@ int memory_pool_part_free(memory_pool *pool, void *ptr, part_info_array *info)
 			 * 相反情况则是有重叠，有重叠则返回错误。
 			 */
 			if (!(i_end <= j_start || j_end <= i_start)) {
-				return PART_FREE_RET_Bad_partinfo;
+				return SLICE_FREE_RET_Bad_sliceinfo;
 			}
 		}
 	}
 
 	//对待释放的部分内存按地址做排序，大的地址放后面
-	part_info tmp;
+	slice_info tmp;
 	for (int i = 0; i < info->num; i++) {
 		for (int j = 1; j < info->num - i; j++) {
-			if ((uint64_t)info->part_arr[j - 1].part_ptr >
-				(uint64_t)info->part_arr[j].part_ptr)
+			if ((uint64_t)info->slice_arr[j - 1].ptr >
+				(uint64_t)info->slice_arr[j].ptr)
 			{
-				tmp = info->part_arr[j - 1];
-				info->part_arr[j - 1] = info->part_arr[j];
-				info->part_arr[j] = tmp;
+				tmp = info->slice_arr[j - 1];
+				info->slice_arr[j - 1] = info->slice_arr[j];
+				info->slice_arr[j] = tmp;
 			}
 		}
 	}
 
 	//逐个进行部分内存释放，从大地址往小地址走
 	int s_i = 0;
-	int ret_i = PART_INFO_MAX_NUM;
+	int ret_i = SLICE_INFO_MAX_NUM;
 	seg_item *curt = NULL;
 
 	for (int i = info->num - 1; i >= 0 ; i--) {
-		void* part_ptr = info->part_arr[i].part_ptr;
-		int32_t part_size = info->part_arr[i].part_size;
+		void* ptr = info->slice_arr[i].ptr;
+		int32_t size = info->slice_arr[i].size;
 
-		curt = (seg_item *)((uint8_t *)part_ptr);
+		curt = (seg_item *)((uint8_t *)ptr);
 		curt->magic = SEG_ITEM_MAGIC;
 		curt->state = STAT_IN_FREE;
-		curt->linear_addr_offset_start = (uint32_t)((uint64_t)part_ptr - (uint64_t)pool->memory_addr);
-		curt->linear_addr_offset_end = curt->linear_addr_offset_start + part_size;
+		curt->linear_addr_offset_start = (uint32_t)((uint64_t)ptr - (uint64_t)pool->memory_addr);
+		curt->linear_addr_offset_end = curt->linear_addr_offset_start + size;
 		
 		curt->linear_addr_list_prev = head;
 		curt->linear_addr_list_next = head->linear_addr_list_next;
@@ -422,8 +422,8 @@ int memory_pool_part_free(memory_pool *pool, void *ptr, part_info_array *info)
 
 			curt->linear_addr_offset_end = item->linear_addr_offset_start;
 
-			info->part_arr[ret_i].part_ptr = (uint8_t *)item + sizeof(seg_item);
-			info->part_arr[ret_i].part_size = item->linear_addr_offset_end - 
+			info->slice_arr[ret_i].ptr = (uint8_t *)item + sizeof(seg_item);
+			info->slice_arr[ret_i].size = item->linear_addr_offset_end - 
 				item->linear_addr_offset_start - sizeof(seg_item);
 			ret_i --;
 		}
@@ -441,8 +441,8 @@ int memory_pool_part_free(memory_pool *pool, void *ptr, part_info_array *info)
 
 	//最前面还有一块使用中内存
 	if (head->linear_addr_offset_start + sizeof(seg_item) < curt->linear_addr_offset_start) {
-		info->part_arr[ret_i].part_ptr = (uint8_t *)head + sizeof(seg_item);
-		info->part_arr[ret_i].part_size = head->linear_addr_offset_end -
+		info->slice_arr[ret_i].ptr = (uint8_t *)head + sizeof(seg_item);
+		info->slice_arr[ret_i].size = head->linear_addr_offset_end -
 			head->linear_addr_offset_start - sizeof(seg_item);
 		ret_i--;
 
@@ -457,13 +457,13 @@ int memory_pool_part_free(memory_pool *pool, void *ptr, part_info_array *info)
 		memory_pool_free_inner(pool, head);
 	}
 
-	info->num = PART_INFO_MAX_NUM - ret_i;
-	if (info->num < PART_INFO_MAX_NUM) {
+	info->num = SLICE_INFO_MAX_NUM - ret_i;
+	if (info->num < SLICE_INFO_MAX_NUM) {
 		int offset = ret_i + 1;
 		for (int i = 0; i < info->num; i++) {
-			info->part_arr[i] = info->part_arr[i + offset];
+			info->slice_arr[i] = info->slice_arr[i + offset];
 		}
 	}
 
-	return PART_FREE_RET_Ok;
+	return SLICE_FREE_RET_Ok;
 }
