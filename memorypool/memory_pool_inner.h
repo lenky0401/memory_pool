@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <mutex>
 
 #define mp_print printf
 
@@ -46,6 +47,8 @@ typedef struct seg_head {
 
 typedef struct memory_pool{
 	bool thread_safe;
+	std::mutex mutex;
+
 	uint32_t memory_max_size;
 	uint32_t memory_max_order;
 	uint8_t *memory_addr;
