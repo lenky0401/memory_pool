@@ -21,6 +21,8 @@ int main()
 
 	test_slice_free();
 
+	test_multi_thread();
+
 	printf("ok\n");
 	getchar();
 	return 0;

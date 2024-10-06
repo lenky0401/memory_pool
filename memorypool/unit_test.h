@@ -13,4 +13,6 @@ void test_malloc();
 
 void test_slice_free();
 
+void test_multi_thread();
+
 #endif

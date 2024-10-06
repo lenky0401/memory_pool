@@ -6,6 +6,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 #include "unit_test.h"
 #include "memory_pool_inner.h"
 #include "memory_common.h"
@@ -194,5 +198,61 @@ void test_slice_free()
 	}
 
 	//end
+	memory_pool_destroy(pool);
+}
+
+bool quit = false;
+void test_multi_thread_i(memory_pool *pool)
+{
+	do
+	{
+		int size = rand() % 10000;
+
+		void *p = memory_pool_malloc(pool, size);
+		assert(p);
+
+#ifdef _WIN32
+		Sleep((rand() % 1000) + 500);
+#endif
+
+		memory_pool_free(pool, p);
+
+	} while (!quit);
+}
+
+#define THREADS_NUM 100
+void test_multi_thread()
+{
+	srand((uint32_t)time(NULL));
+
+	memory_pool *pool = memory_pool_create(10 * 1024 * 1024, true);
+	assert(pool);
+	check_meta_complete_state(pool);
+
+	std::thread threads[THREADS_NUM];
+
+	for (int i = 0; i < THREADS_NUM; i++)
+	{
+		threads[i] = std::thread(test_multi_thread_i, pool);
+	}
+
+	printf("%d threads ready to race...\n", THREADS_NUM);
+
+	for (int i = 10; i > 0; i--)
+	{
+		printf("Waiting for %d secondes\n", i);
+#ifdef _WIN32
+		Sleep(1000);
+#endif
+	}
+
+	quit = true;
+
+	for (auto & th : threads)
+	{
+		th.join();
+	}
+
+	check_meta_complete_state(pool);
 	memory_pool_destroy(pool);
 }
