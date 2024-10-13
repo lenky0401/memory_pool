@@ -11,6 +11,12 @@
 
 #include "memory_common.h"
 
+/**
+ * 管理起来的free item，需要使用一个seg_item，然后后面是空闲内存。
+ * 如果空闲内存小于16字节，则直接不用管理。16是个拍脑袋决定的值。
+ */
+#define FREE_SEG_ITEM_MIN_SIZE (sizeof(seg_item) + 16)
+
 static void seg_free_order_add(memory_pool *pool, seg_item *item)
 {
 	uint32_t order = get_align_order(get_seg_item_size(item));
@@ -144,7 +150,7 @@ void* memory_pool_malloc(memory_pool *pool, uint32_t size)
 	{
 		std::lock_guard<std::mutex> guard(pool->mutex);
 
-		uint32_t need_size = size + sizeof(seg_item) + MEM_ADDR_ALIGN_PADDING;
+		uint32_t need_size = size + sizeof(seg_item);
 		uint32_t need_order = get_align_order(need_size);
 		for (uint32_t curt_order = need_order; curt_order <= pool->memory_max_order; curt_order++) {
 
@@ -173,8 +179,8 @@ void* memory_pool_malloc(memory_pool *pool, uint32_t size)
 			item->free_list_next->free_list_prev = item->free_list_prev;
 			item->free_list_prev->free_list_next = item->free_list_next;
 
-			//如果大小刚好足够，直接返回
-			if (get_seg_item_size(item) == need_size) {
+			//如果分配后，该item的剩余空间小于FREE_SEG_ITEM_MIN_SIZE，则直接返回即可
+			if (get_seg_item_size(item) < need_size + FREE_SEG_ITEM_MIN_SIZE) {
 				item->state = STAT_IN_USE;
 				return (item + 1);
 			}
