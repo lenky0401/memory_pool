@@ -1,9 +1,11 @@
 ﻿#ifndef _MEMORY_POOL_H_INCLUDED_
 #define _MEMORY_POOL_H_INCLUDED_
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
+#ifdef __cplusplus
+//extern "C" {
+#endif //_cplusplus
+
+#include "memory_pool_inner.h"
 
 /**
  * @brief 创建内存池
@@ -11,7 +13,7 @@
  * @param thread_safe 是否线程安全
  * @return 内存池指针
  */
-memory_pool* memory_pool_create(uint32_t size, bool thread_safe);
+memory_pool* memory_pool_create(uint32_t size, int32_t need_thread_safe);
 
 /**
  * @brief 销毁内存池
@@ -60,5 +62,9 @@ typedef struct slice_info_array {
 #define SLICE_FREE_RET_Bad_parameter 2
 #define SLICE_FREE_RET_Bad_sliceinfo 3
 int memory_pool_slice_free(memory_pool *pool, void *ptr, slice_info_array *info);
+
+#ifdef __cplusplus
+//}
+#endif //_cplusplus
 
 #endif

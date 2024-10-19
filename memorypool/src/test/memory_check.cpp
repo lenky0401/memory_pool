@@ -1,16 +1,6 @@
 ﻿
-#include <stdlib.h>
-#include <assert.h>
-#include <errno.h>
-#include <malloc.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "memory_pool_inner.h"
-#include "memory_pool.h"
-
-#include "memory_common.h"
 #include "memory_check.h"
+#include "../memory_common.h"
 
 /**
  * 检查线性地址链表是否正确

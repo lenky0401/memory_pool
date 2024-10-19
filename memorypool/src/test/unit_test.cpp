@@ -1,20 +1,14 @@
 ﻿
-#include <stdlib.h>
-#include <assert.h>
-#include <errno.h>
-#include <malloc.h>
-#include <stdio.h>
-#include <string.h>
-
 #ifdef _WIN32
 #include <Windows.h>
 #endif
 
+#include <thread>
+#include <assert.h>
+
 #include "unit_test.h"
-#include "memory_pool_inner.h"
-#include "memory_common.h"
-#include "memory_pool.h"
 #include "memory_check.h"
+#include "../memory_common.h"
 
 void test_os_malloc_free()
 {

@@ -1,15 +1,10 @@
 ﻿#ifndef _MEMORY_COMMON_H_INCLUDED_
 #define _MEMORY_COMMON_H_INCLUDED_
 
-#include <stdlib.h>
-#include <assert.h>
-#include <errno.h>
-#include <malloc.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "memory_pool_inner.h"
 #include "memory_pool.h"
+
+#define TRUE 1
+#define FALSE 0
 
 #define MEM_ADDR_ALIGN_PADDING (sizeof(void*) + (MP_CACHELINE_SIZE - 1))
 
