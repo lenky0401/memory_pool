@@ -3,13 +3,8 @@
 #include <errno.h>
 #include <malloc.h>
 
-#include "memory_pool_inner.h"
-#include "memory_pool.h"
-
-#include "memory_common.h"
-
+#include "memory_check.h"
 #include "unit_test.h"
-
 
 int main()
 {

@@ -1,9 +1,7 @@
 ﻿#ifndef _MEMORY_CHECK_H_INCLUDED_
 #define _MEMORY_CHECK_H_INCLUDED_
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include "../memory_pool.h"
 
 /**
  * @brief 检查运行过程中，元信息状态是否正确

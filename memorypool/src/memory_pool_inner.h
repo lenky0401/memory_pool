@@ -1,10 +1,16 @@
 ﻿#ifndef _MEMORY_POOL_INNER_H_INCLUDED_
 #define _MEMORY_POOL_INNER_H_INCLUDED_
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <assert.h>
+
+#ifdef _POSIX_THREADS
+#include <pthread.h>
+#else
 #include <mutex>
+#endif
 
 #define mp_print printf
 
@@ -27,8 +33,8 @@
 
 typedef struct seg_item {
 	//必须放结构体最前面，和seg_head保持一致
-	seg_item *free_list_prev;	//空闲内存链表
-	seg_item *free_list_next;	//空闲内存链表
+	struct seg_item *free_list_prev;	//空闲内存链表
+	struct seg_item *free_list_next;	//空闲内存链表
 
 	uint32_t magic;
 	uint32_t state;
@@ -36,8 +42,8 @@ typedef struct seg_item {
 	uint32_t linear_addr_offset_start;	//当前seg管理内存段的开始线性地址，包含seg结构体大小在内
 	uint32_t linear_addr_offset_end;	//当前seg管理内存段的结束线性地址，包含seg结构体大小在内
 
-	seg_item *linear_addr_list_prev;	//线性地址链表
-	seg_item *linear_addr_list_next;	//线性地址链表
+	struct seg_item *linear_addr_list_prev;	//线性地址链表
+	struct seg_item *linear_addr_list_next;	//线性地址链表
 } seg_item;
 
 typedef struct seg_head {
@@ -46,9 +52,12 @@ typedef struct seg_head {
 } seg_head;
 
 typedef struct memory_pool{
-	bool thread_safe;
+	int32_t need_thread_safe;
+#ifdef _POSIX_THREADS
+	pthread_mutex_t mutex;
+#else
 	std::mutex mutex;
-
+#endif
 	uint32_t memory_max_size;
 	uint32_t memory_max_order;
 	uint8_t *memory_addr;
