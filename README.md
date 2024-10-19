@@ -42,14 +42,14 @@ int memory_pool_free(memory_pool *pool, void *ptr);
 #define SLICE_INFO_MAX_NUM (8)
 
 typedef struct slice_info {
-	void* ptr;		//分片内存的起始地址
-	int32_t size;	//分片内存的大小，必须大于等于SLICE_FREE_MIN_SIZE
+    void* ptr;       //分片内存的起始地址
+    int32_t size;    //分片内存的大小，必须大于等于SLICE_FREE_MIN_SIZE
 } slice_info;
 
 typedef struct slice_info_array {
-	int32_t num;	//需要释放几块分片内存
-	slice_info slice_arr[SLICE_INFO_MAX_NUM + 1];	//每块分片内存的起始地址指针
-													//释放中间内存后，返回的内存被切开，因此数量+1
+    int32_t num;    //需要释放几块分片内存
+    slice_info slice_arr[SLICE_INFO_MAX_NUM + 1];   //每块分片内存的起始地址指针
+                                                    //释放中间内存后，返回的内存被切开，因此数量+1
 } slice_info_array;
 
 #define SLICE_FREE_RET_Ok 0
