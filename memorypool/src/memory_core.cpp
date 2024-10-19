@@ -378,7 +378,7 @@ void memory_pool_slice_free_inner(memory_pool *pool, void *ptr, slice_info_array
 {
 	seg_item *head = (seg_item *)((uint8_t *)ptr - sizeof(seg_item));
 
-	//逐个进行部分内存释放，从大地址往小地址走
+	//逐个进行分片内存释放，从大地址往小地址走
 	int s_i = 0;
 	int ret_i = SLICE_INFO_MAX_NUM;
 	seg_item *curt = NULL;
@@ -466,19 +466,19 @@ int memory_pool_slice_free(memory_pool *pool, void *ptr, slice_info_array *info)
 		return SLICE_FREE_RET_Bad_parameter;
 	}
 
-	//不在内存池范围里，不支持部分释放
+	//不在内存池范围里，不支持分片释放
 	if (!is_memory_pool_addr(pool, ptr)) {
 		return SLICE_FREE_RET_Not_Supported;
 	}
 
 	//参数错误
-	//1，部分内存个数是否错误
+	//1，分片内存个数是否错误
 	if (info->num <= 0 || info->num > SLICE_INFO_MAX_NUM) {
 		return SLICE_FREE_RET_Bad_sliceinfo;
 	}
 
 	/**
-	 * 2，部分内存太小或不在ptr内存段范围里
+	 * 2，分片内存太小或不在ptr内存段范围里
 	 * 说明：之所以要大于等于两倍SLICE_FREE_MIN_SIZE，是因为其自身需要一个SLICE_FREE_MIN_SIZE，
 	 * 而其后面的使用中内存也需要一个SLICE_FREE_MIN_SIZE。
 	 */
@@ -492,7 +492,7 @@ int memory_pool_slice_free(memory_pool *pool, void *ptr, slice_info_array *info)
 			return SLICE_FREE_RET_Bad_sliceinfo;
 		}
 	}
-	//3，部分内存之间是否有相互重叠
+	//3，分片内存之间是否有相互重叠
 	for (int i = 0; i < info->num; i++) {
 		uint64_t i_start = (uint64_t)info->slice_arr[i].ptr;
 		uint64_t i_end = i_start + info->slice_arr[i].size;
@@ -511,7 +511,7 @@ int memory_pool_slice_free(memory_pool *pool, void *ptr, slice_info_array *info)
 		}
 	}
 
-	//对待释放的部分内存按地址做排序，大的地址放后面
+	//对待释放的分片内存按地址做排序，大的地址放后面
 	slice_info tmp;
 	for (int i = 0; i < info->num; i++) {
 		for (int j = 1; j < info->num - i; j++) {
