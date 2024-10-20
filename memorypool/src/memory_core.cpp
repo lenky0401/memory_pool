@@ -341,7 +341,7 @@ int memory_pool_free(memory_pool *pool, void *ptr)
 {
     //参数错误
     if (!pool || !ptr) {
-        return SLICE_FREE_RET_Bad_parameter;
+        return SLICE_FREE_RET_Bad_Parameter;
     }
 
     //不在内存池范围里，直接释放
@@ -463,7 +463,7 @@ int memory_pool_slice_free(memory_pool *pool, void *ptr, slice_info_array *info)
 {
     //参数错误
     if (!pool || !ptr || !info) {
-        return SLICE_FREE_RET_Bad_parameter;
+        return SLICE_FREE_RET_Bad_Parameter;
     }
 
     //不在内存池范围里，不支持分片释放
@@ -474,7 +474,7 @@ int memory_pool_slice_free(memory_pool *pool, void *ptr, slice_info_array *info)
     //参数错误
     //1，分片内存个数是否错误
     if (info->num <= 0 || info->num > SLICE_INFO_MAX_NUM) {
-        return SLICE_FREE_RET_Bad_sliceinfo;
+        return SLICE_FREE_RET_Bad_Slice_Info;
     }
 
     /**
@@ -489,7 +489,7 @@ int memory_pool_slice_free(memory_pool *pool, void *ptr, slice_info_array *info)
         void* ptr = info->slice_arr[i].ptr;
         int32_t size = info->slice_arr[i].size;
         if (size < 2 * sizeof(seg_item) || !in_memory_pool_seg_range(pool, head, ptr, size)) {
-            return SLICE_FREE_RET_Bad_sliceinfo;
+            return SLICE_FREE_RET_Bad_Slice_Info;
         }
     }
     //3，分片内存之间是否有相互重叠
@@ -506,7 +506,7 @@ int memory_pool_slice_free(memory_pool *pool, void *ptr, slice_info_array *info)
              * 相反情况则是有重叠，有重叠则返回错误。
              */
             if (!(i_end <= j_start || j_end <= i_start)) {
-                return SLICE_FREE_RET_Bad_sliceinfo;
+                return SLICE_FREE_RET_Bad_Slice_Info;
             }
         }
     }

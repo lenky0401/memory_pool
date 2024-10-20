@@ -54,8 +54,8 @@ typedef struct slice_info_array {
 
 #define SLICE_FREE_RET_Ok 0
 #define SLICE_FREE_RET_Not_Supported 1
-#define SLICE_FREE_RET_Bad_parameter 2
-#define SLICE_FREE_RET_Bad_sliceinfo 3
+#define SLICE_FREE_RET_Bad_Parameter 2
+#define SLICE_FREE_RET_Bad_Slice_Info 3
 
 /**
  * @brief 内存分片释放
