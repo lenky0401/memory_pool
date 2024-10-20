@@ -86,12 +86,28 @@ static void check_free_meta_running_state(memory_pool *pool)
 }
 
 /**
- * 检查两个链表是否正确
+ * 检查使用过程中，两个链表是否正确
  */
 void check_meta_running_state(memory_pool *pool)
 {
-    check_linear_meta_running_state(pool);
-    check_free_meta_running_state(pool);
+    if (pool->need_thread_safe) {
+#ifdef _POSIX_THREADS
+        pthread_mutex_lock(&pool->mutex);
+#else
+        std::lock_guard<std::mutex> guard(pool->mutex);
+#endif
+
+        check_linear_meta_running_state(pool);
+        check_free_meta_running_state(pool);
+
+#ifdef _POSIX_THREADS
+        pthread_mutex_unlock(&pool->mutex);
+#endif
+    }
+    else {
+        check_linear_meta_running_state(pool);
+        check_free_meta_running_state(pool);
+    }
 }
 
 /**

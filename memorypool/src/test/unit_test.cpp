@@ -238,9 +238,14 @@ void test_multi_thread()
     for (int i = 10; i > 0; i--)
     {
         printf("Waiting for %d secondes\n", i);
+
 #ifdef _WIN32
         Sleep(1000);
+#else
+        //TOOD
 #endif
+
+        check_meta_running_state(pool);
     }
 
     quit = true;
