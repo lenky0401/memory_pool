@@ -32,37 +32,37 @@
 #define SEG_ITEM_INVALID_VALUE (-1)
 
 typedef struct seg_item {
-	//必须放结构体最前面，和seg_head保持一致
-	struct seg_item *free_list_prev;	//空闲内存链表
-	struct seg_item *free_list_next;	//空闲内存链表
+    //必须放结构体最前面，和seg_head保持一致
+    struct seg_item *free_list_prev;    //空闲内存链表
+    struct seg_item *free_list_next;    //空闲内存链表
 
-	uint32_t magic;
-	uint32_t state;
+    uint32_t magic;
+    uint32_t state;
 
-	uint32_t linear_addr_offset_start;	//当前seg管理内存段的开始线性地址，包含seg结构体大小在内
-	uint32_t linear_addr_offset_end;	//当前seg管理内存段的结束线性地址，包含seg结构体大小在内
+    uint32_t linear_addr_offset_start;    //当前seg管理内存段的开始线性地址，包含seg结构体大小在内
+    uint32_t linear_addr_offset_end;      //当前seg管理内存段的结束线性地址，包含seg结构体大小在内
 
-	struct seg_item *linear_addr_list_prev;	//线性地址链表
-	struct seg_item *linear_addr_list_next;	//线性地址链表
+    struct seg_item *linear_addr_list_prev;    //线性地址链表
+    struct seg_item *linear_addr_list_next;    //线性地址链表
 } seg_item;
 
 typedef struct seg_head {
-	seg_item *free_list_prev;	//空闲内存链表
-	seg_item *free_list_next;
+    seg_item *free_list_prev;    //空闲内存链表
+    seg_item *free_list_next;
 } seg_head;
 
 typedef struct memory_pool{
-	int32_t need_thread_safe;
+    int32_t need_thread_safe;
 #ifdef _POSIX_THREADS
-	pthread_mutex_t mutex;
+    pthread_mutex_t mutex;
 #else
-	std::mutex mutex;
+    std::mutex mutex;
 #endif
-	uint32_t memory_max_size;
-	uint32_t memory_max_order;
-	uint8_t *memory_addr;
+    uint32_t memory_max_size;
+    uint32_t memory_max_order;
+    uint8_t *memory_addr;
 
-	seg_head *seg_head_arr;
+    seg_head *seg_head_arr;
 } memory_pool;
 
 #endif
