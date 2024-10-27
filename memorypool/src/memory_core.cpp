@@ -173,8 +173,8 @@ void* memory_pool_malloc_inner(memory_pool *pool, uint32_t size)
         item->free_list_next->free_list_prev = item->free_list_prev;
         item->free_list_prev->free_list_next = item->free_list_next;
 
-        //如果分配后，该item的剩余空间小于sizeof(seg_item)，则由于无法存储元数据，只能浪费了
-        if (get_seg_item_size(item) < need_size + sizeof(seg_item)) {
+        //如果分配后，该item的剩余空间小于等于sizeof(seg_item)，则由于无法存储元数据，只能浪费了
+        if (get_seg_item_size(item) <= need_size + sizeof(seg_item)) {
             item->state = STAT_IN_USE;
             return (item + 1);
         }

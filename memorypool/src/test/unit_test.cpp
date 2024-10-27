@@ -198,11 +198,11 @@ void test_slice_free()
 bool quit = false;
 #define THREADS_NUM 100
 #define MEM_1M (1024 * 1024)
-#define TEST_TIME 30
+#define TEST_TIME 3000
 
 void test_thread_free(memory_pool *pool)
 {
-    int size = rand() % MEM_1M;
+    int size = rand() % MEM_1M + 1;
 
     void *p = memory_pool_malloc(pool, size);
     assert(p);
