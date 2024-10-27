@@ -7,12 +7,6 @@
 #include <mutex>
 #endif
 
-/**
- * 管理起来的free item，需要使用一个seg_item，然后后面是空闲内存。
- * 如果空闲内存小于16字节，则直接不用管理。16是个拍脑袋决定的值。
- */
-#define FREE_SEG_ITEM_MIN_SIZE (sizeof(seg_item) + 16)
-
 static void seg_free_order_add(memory_pool *pool, seg_item *item)
 {
     uint32_t order = get_align_order(get_seg_item_size(item));
@@ -179,8 +173,8 @@ void* memory_pool_malloc_inner(memory_pool *pool, uint32_t size)
         item->free_list_next->free_list_prev = item->free_list_prev;
         item->free_list_prev->free_list_next = item->free_list_next;
 
-        //如果分配后，该item的剩余空间小于FREE_SEG_ITEM_MIN_SIZE，则直接返回即可
-        if (get_seg_item_size(item) < need_size + FREE_SEG_ITEM_MIN_SIZE) {
+        //如果分配后，该item的剩余空间小于sizeof(seg_item)，则由于无法存储元数据，只能浪费了
+        if (get_seg_item_size(item) < need_size + sizeof(seg_item)) {
             item->state = STAT_IN_USE;
             return (item + 1);
         }
@@ -380,7 +374,7 @@ void memory_pool_slice_free_inner(memory_pool *pool, void *ptr, slice_info_array
 
     //逐个进行分片内存释放，从大地址往小地址走
     int s_i = 0;
-    int ret_i = SLICE_INFO_MAX_NUM;
+    int ret_i = SLICE_INFO_NUM_MAX;
     seg_item *curt = NULL;
 
     for (int i = info->num - 1; i >= 0; i--) {
@@ -450,8 +444,8 @@ void memory_pool_slice_free_inner(memory_pool *pool, void *ptr, slice_info_array
         memory_pool_free_inner(pool, head);
     }
 
-    info->num = SLICE_INFO_MAX_NUM - ret_i;
-    if (info->num < SLICE_INFO_MAX_NUM) {
+    info->num = SLICE_INFO_NUM_MAX - ret_i;
+    if (info->num <= SLICE_INFO_NUM_MAX) {
         int offset = ret_i + 1;
         for (int i = 0; i < info->num; i++) {
             info->slice_arr[i] = info->slice_arr[i + offset];
@@ -473,7 +467,7 @@ int memory_pool_slice_free(memory_pool *pool, void *ptr, slice_info_array *info)
 
     //参数错误
     //1，分片内存个数是否错误
-    if (info->num <= 0 || info->num > SLICE_INFO_MAX_NUM) {
+    if (info->num <= 0 || info->num > SLICE_INFO_NUM_MAX) {
         return SLICE_FREE_RET_Bad_Slice_Info;
     }
 
@@ -488,7 +482,7 @@ int memory_pool_slice_free(memory_pool *pool, void *ptr, slice_info_array *info)
     for (int i = 0; i < info->num; i++) {
         void* ptr = info->slice_arr[i].ptr;
         int32_t size = info->slice_arr[i].size;
-        if (size < 2 * sizeof(seg_item) || !in_memory_pool_seg_range(pool, head, ptr, size)) {
+        if (size < SLICE_SIZE_MIN || !in_memory_pool_seg_range(pool, head, ptr, size)) {
             return SLICE_FREE_RET_Bad_Slice_Info;
         }
     }

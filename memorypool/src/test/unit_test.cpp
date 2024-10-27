@@ -164,7 +164,7 @@ void test_slice_free()
         check_meta_running_state(pool);
 
         slice_info_array info;
-        info.num = SLICE_INFO_MAX_NUM;
+        info.num = SLICE_INFO_NUM_MAX;
         info.slice_arr[0].ptr = (uint8_t *)p + 1500;
         info.slice_arr[0].size = 100;
         info.slice_arr[1].ptr = (uint8_t *)p + 1100;
@@ -234,19 +234,17 @@ void test_thread_slice_free(memory_pool *pool)
     slice_info_array info;
     memset(&info, 0, sizeof(info));
 
-    info.num = (rand() % (SLICE_INFO_MAX_NUM - 1)) + 1;
+    info.num = (rand() % (SLICE_INFO_NUM_MAX - 1)) + 1;
 
     int slice_max_size = size / info.num;
     for (int i = 0; i < info.num; i++) {
 
-        int slice_offset = (rand() % slice_max_size) - sizeof(seg_item);
+        //确保偏移后留够可用于保存元数据的空间
+        int slice_offset = (rand() % slice_max_size) - (SLICE_SIZE_MIN + 1);
         if (slice_offset < 0) {
             slice_offset = 0;
         }
-        int slice_size = (rand() % (slice_max_size - slice_offset)) - sizeof(seg_item);
-        if (slice_size < 0) {
-            slice_size = 0;
-        }
+        int slice_size = (rand() % (slice_max_size - slice_offset)) + (SLICE_SIZE_MIN + 1);
 
         info.slice_arr[i].ptr = (uint8_t *)p + i * slice_max_size + slice_offset;
         info.slice_arr[i].size = slice_size;
@@ -307,6 +305,8 @@ void test_multi_thread()
     }
 
     quit = true;
+
+    printf("Waiting child thread exit...\n");
 
     for (auto & th : threads)
     {

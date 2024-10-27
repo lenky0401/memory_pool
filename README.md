@@ -39,17 +39,19 @@ void* memory_pool_malloc(memory_pool *pool, uint32_t size);
 int memory_pool_free(memory_pool *pool, void *ptr);
 
 //一次最多释放8块分片内存
-#define SLICE_INFO_MAX_NUM (8)
+#define SLICE_INFO_NUM_MAX (8)
+//分片释放的每片最小Size，小于这个值无法释放，因为可能无法存放元数据而无法管理
+#define SLICE_SIZE_MIN (2 * sizeof(seg_item))
 
 typedef struct slice_info {
-    void* ptr;       //分片内存的起始地址
-    int32_t size;    //分片内存的大小，必须大于等于SLICE_FREE_MIN_SIZE
+    void* ptr;        //分片内存的起始地址
+    int32_t size;     //分片内存的大小，必须大于等于SLICE_FREE_MIN_SIZE
 } slice_info;
 
 typedef struct slice_info_array {
     int32_t num;    //需要释放几块分片内存
-    slice_info slice_arr[SLICE_INFO_MAX_NUM + 1];   //每块分片内存的起始地址指针
-                                                    //释放中间内存后，返回的内存被切开，因此数量+1
+    slice_info slice_arr[SLICE_INFO_NUM_MAX + 1];    //每块分片内存的起始地址指针
+                                                     //释放中间内存后，返回的内存被切开，因此数量+1
 } slice_info_array;
 
 #define SLICE_FREE_RET_Ok 0
