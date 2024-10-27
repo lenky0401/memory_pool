@@ -196,33 +196,91 @@ void test_slice_free()
 }
 
 bool quit = false;
-void test_multi_thread_i(memory_pool *pool)
-{
-    do
-    {
-        int size = rand() % 10000;
+#define THREADS_NUM 100
+#define MEM_1M (1024 * 1024)
+#define TEST_TIME 30
 
-        void *p = memory_pool_malloc(pool, size);
-        assert(p);
+void test_thread_free(memory_pool *pool)
+{
+    int size = rand() % MEM_1M;
+
+    void *p = memory_pool_malloc(pool, size);
+    assert(p);
 
 #ifdef _WIN32
-        Sleep((rand() % 1000) + 200);
+    Sleep((rand() % 1000) + 200);
 #else
-        //TODO
+    //TODO
 
 #endif
 
-        memory_pool_free(pool, p);
+    memory_pool_free(pool, p);
+}
+
+void test_thread_slice_free(memory_pool *pool)
+{
+    int size = rand() % MEM_1M + MEM_1M;
+
+    void *p = memory_pool_malloc(pool, size);
+    assert(p);
+
+#ifdef _WIN32
+    Sleep((rand() % 1000) + 200);
+#else
+    //TODO
+
+#endif
+
+    slice_info_array info;
+    memset(&info, 0, sizeof(info));
+
+    info.num = (rand() % (SLICE_INFO_MAX_NUM - 1)) + 1;
+
+    int slice_max_size = size / info.num;
+    for (int i = 0; i < info.num; i++) {
+
+        int slice_offset = (rand() % slice_max_size) - sizeof(seg_item);
+        if (slice_offset < 0) {
+            slice_offset = 0;
+        }
+        int slice_size = (rand() % (slice_max_size - slice_offset)) - sizeof(seg_item);
+        if (slice_size < 0) {
+            slice_size = 0;
+        }
+
+        info.slice_arr[i].ptr = (uint8_t *)p + i * slice_max_size + slice_offset;
+        info.slice_arr[i].size = slice_size;
+    }
+
+    slice_info_array old_info;
+    memcpy(&old_info, &info, sizeof(slice_info_array));
+
+    int ret = memory_pool_slice_free(pool, p, &info);
+    assert(ret == SLICE_FREE_RET_Ok || ret == SLICE_FREE_RET_Not_Supported);
+
+    if (ret == SLICE_FREE_RET_Ok) {
+        for (int i = 0; i < info.num; i++) {
+            memory_pool_free(pool, info.slice_arr[i].ptr);
+        }
+    }
+}
+
+void test_multi_thread_i(memory_pool *pool)
+{
+    srand((uint32_t)time(NULL));
+
+    do
+    {
+        test_thread_free(pool);
+        test_thread_slice_free(pool);
 
     } while (!quit);
 }
 
-#define THREADS_NUM 100
 void test_multi_thread()
 {
-    srand((uint32_t)time(NULL));
 
-    memory_pool *pool = memory_pool_create(10 * 1024 * 1024, true);
+    memory_pool *pool = memory_pool_create(THREADS_NUM * MEM_1M, true);
     assert(pool);
     check_meta_complete_state(pool);
 
@@ -235,7 +293,7 @@ void test_multi_thread()
 
     printf("%d threads ready to race...\n", THREADS_NUM);
 
-    for (int i = 10; i > 0; i--)
+    for (int i = TEST_TIME; i > 0; i--)
     {
         printf("Waiting for %d secondes\n", i);
 
