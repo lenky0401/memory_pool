@@ -464,7 +464,7 @@ int memory_pool_slice_free(memory_pool *pool, void *ptr, slice_info_array *info)
 
     //不在内存池范围里，不支持分片释放
     if (!is_memory_pool_addr(pool, ptr)) {
-        return SLICE_FREE_RET_Not_Supported;
+        return SLICE_FREE_RET_Not_In_Memory_Pool;
     }
 
     //参数错误

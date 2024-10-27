@@ -254,12 +254,15 @@ void test_thread_slice_free(memory_pool *pool)
     memcpy(&old_info, &info, sizeof(slice_info_array));
 
     int ret = memory_pool_slice_free(pool, p, &info);
-    assert(ret == SLICE_FREE_RET_Ok || ret == SLICE_FREE_RET_Not_Supported);
+    assert(ret == SLICE_FREE_RET_Ok || ret == SLICE_FREE_RET_Not_In_Memory_Pool);
 
     if (ret == SLICE_FREE_RET_Ok) {
         for (int i = 0; i < info.num; i++) {
             memory_pool_free(pool, info.slice_arr[i].ptr);
         }
+    }
+    else if (ret == SLICE_FREE_RET_Not_In_Memory_Pool) {
+        os_free(p);
     }
 }
 
