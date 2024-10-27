@@ -253,7 +253,9 @@ static void memory_pool_free_inner(memory_pool *pool, seg_item *curt)
 
     assert(next->magic == SEG_ITEM_MAGIC);
     assert(next->state == STAT_IN_FREE || next->state == STAT_IN_USE);
-    assert(next->linear_addr_offset_start == curt->linear_addr_offset_end);
+    assert(next->linear_addr_offset_start == curt->linear_addr_offset_end ||
+        (next->linear_addr_offset_start == 0 &&
+            (curt->linear_addr_offset_end == pool->memory_max_size)));
 
     curt->state = STAT_IN_FREE;
 
