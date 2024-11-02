@@ -105,7 +105,7 @@ void test_slice_free()
         info.slice_arr[1].size = 100;
 
         int ret = memory_pool_slice_free(pool, p, &info);
-        assert(ret == SLICE_FREE_RET_Ok);
+        assert(ret == FREE_RET_Ok);
         check_meta_running_state(pool);
         for (int i = 0; i < info.num; i++) {
             memory_pool_free(pool, info.slice_arr[i].ptr);
@@ -127,7 +127,7 @@ void test_slice_free()
         info.slice_arr[1].size = 100;
 
         int ret = memory_pool_slice_free(pool, p, &info);
-        assert(ret == SLICE_FREE_RET_Ok);
+        assert(ret == FREE_RET_Ok);
         check_meta_running_state(pool);
         for (int i = 0; i < info.num; i++) {
             memory_pool_free(pool, info.slice_arr[i].ptr);
@@ -149,7 +149,7 @@ void test_slice_free()
         info.slice_arr[1].size = 100;
 
         int ret = memory_pool_slice_free(pool, p, &info);
-        assert(ret == SLICE_FREE_RET_Ok);
+        assert(ret == FREE_RET_Ok);
         check_meta_running_state(pool);
         for (int i = 0; i < info.num; i++) {
             memory_pool_free(pool, info.slice_arr[i].ptr);
@@ -183,7 +183,7 @@ void test_slice_free()
         info.slice_arr[7].size = 100;
 
         int ret = memory_pool_slice_free(pool, p, &info);
-        assert(ret == SLICE_FREE_RET_Ok);
+        assert(ret == FREE_RET_Ok);
         check_meta_running_state(pool);
         for (int i = 0; i < info.num; i++) {
             memory_pool_free(pool, info.slice_arr[i].ptr);
@@ -254,14 +254,14 @@ void test_thread_slice_free(memory_pool *pool)
     memcpy(&old_info, &info, sizeof(slice_info_array));
 
     int ret = memory_pool_slice_free(pool, p, &info);
-    assert(ret == SLICE_FREE_RET_Ok || ret == SLICE_FREE_RET_Not_In_Memory_Pool);
+    assert(ret == FREE_RET_Ok || ret == FREE_RET_Not_In_Memory_Pool);
 
-    if (ret == SLICE_FREE_RET_Ok) {
+    if (ret == FREE_RET_Ok) {
         for (int i = 0; i < info.num; i++) {
             memory_pool_free(pool, info.slice_arr[i].ptr);
         }
     }
-    else if (ret == SLICE_FREE_RET_Not_In_Memory_Pool) {
+    else if (ret == FREE_RET_Not_In_Memory_Pool) {
         os_free(p);
     }
 }
@@ -281,7 +281,7 @@ void test_multi_thread_i(memory_pool *pool)
 void test_multi_thread()
 {
 
-    memory_pool *pool = memory_pool_create(THREADS_NUM * MEM_1M, true);
+    memory_pool *pool = memory_pool_create(2 * THREADS_NUM * MEM_1M, true);
     assert(pool);
     check_meta_complete_state(pool);
 

@@ -7,6 +7,11 @@
 
 #include "memory_pool_inner.h"
 
+#define FREE_RET_Ok 0
+#define FREE_RET_Not_In_Memory_Pool 1
+#define FREE_RET_Bad_Parameter 2
+#define FREE_RET_Bad_Slice_Info 3
+
 /**
  * @brief 创建内存池
  * @param size 内存池大小，单位为字节
@@ -34,7 +39,7 @@ void* memory_pool_malloc(memory_pool *pool, uint32_t size);
  * @brief 内存释放
  * @param pool 内存池指针
  * @param ptr 待释放的内存指针
- * @return void
+ * @return 见：FREE_RET_*
  */
 int memory_pool_free(memory_pool *pool, void *ptr);
 
@@ -45,7 +50,7 @@ int memory_pool_free(memory_pool *pool, void *ptr);
 
 typedef struct slice_info {
     void* ptr;        //分片内存的起始地址
-    int32_t size;     //分片内存的大小，必须大于等于SLICE_FREE_MIN_SIZE
+    int32_t size;     //分片内存的大小，必须大于等于SLICE_SIZE_MIN
 } slice_info;
 
 typedef struct slice_info_array {
@@ -54,17 +59,12 @@ typedef struct slice_info_array {
                                                      //释放中间内存后，返回的内存被切开，因此数量+1
 } slice_info_array;
 
-#define SLICE_FREE_RET_Ok 0
-#define SLICE_FREE_RET_Not_In_Memory_Pool 1
-#define SLICE_FREE_RET_Bad_Parameter 2
-#define SLICE_FREE_RET_Bad_Slice_Info 3
-
 /**
  * @brief 内存分片释放
  * @param pool 内存池指针
  * @param ptr 待分片释放的内存头指针
  * @param info 待分片释放的内存指针
- * @return 见：SLICE_FREE_RET_*
+ * @return 见：FREE_RET_*
  *         释放成功后，切分的分片内存块存在参数info里返回出来。
  */
 int memory_pool_slice_free(memory_pool *pool, void *ptr, slice_info_array *info);
