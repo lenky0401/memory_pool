@@ -45,7 +45,7 @@ int memory_pool_free(memory_pool *pool, void *ptr);
 
 //一次最多释放8块分片内存
 #define SLICE_INFO_NUM_MAX (8)
-//分片释放的每片最小Size，小于这个值无法释放，因为可能无法存放元数据而无法管理
+//分片释放的每片最小Size，小于这个值无法释放，因为无法存放元数据而无法进行管理
 #define SLICE_SIZE_MIN (2 * sizeof(seg_item))
 
 typedef struct slice_info {

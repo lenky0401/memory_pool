@@ -52,6 +52,7 @@ void test_malloc()
 
     void *p = memory_pool_malloc(pool, 100);
     assert(p);
+    memset(p, -1, 100);
     check_meta_running_state(pool);
 
     memory_pool_free(pool, p);
@@ -59,16 +60,21 @@ void test_malloc()
 
     void *p1 = memory_pool_malloc(pool, 100);
     assert(p1);
+    memset(p1, -1, 100);
     void *p2 = memory_pool_malloc(pool, 8000);
     assert(p2);
+    memset(p2, 0, 8000);
     void *p3 = memory_pool_malloc(pool, 1000);
     assert(p3);
+    memset(p3, 0, 1000);
     void *p4 = memory_pool_malloc(pool, 800);
     assert(p4);
+    memset(p4, 0, 800);
     check_meta_running_state(pool);
 
     void *p5 = memory_pool_malloc(pool, 1000);
     assert(p5);
+    memset(p5, 0, 1000);
     check_meta_running_state(pool);
 
     memory_pool_free(pool, p4);
@@ -268,8 +274,6 @@ void test_thread_slice_free(memory_pool *pool)
 
 void test_multi_thread_i(memory_pool *pool)
 {
-    srand((uint32_t)time(NULL));
-
     do
     {
         test_thread_free(pool);

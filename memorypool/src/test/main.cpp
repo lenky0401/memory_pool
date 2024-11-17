@@ -8,6 +8,8 @@
 
 int main()
 {
+    srand((uint32_t)time(NULL));
+
     test_os_malloc_free();
 
     test_get_align_order();
