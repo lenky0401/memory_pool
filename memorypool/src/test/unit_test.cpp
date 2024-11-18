@@ -10,6 +10,19 @@
 #include "memory_check.h"
 #include "../memory_common.h"
 
+void set_mem_value(void *mem, char value, uint32_t size)
+{
+    memset(mem, value, size);
+}
+
+void set_slice_mem_value(slice_info_array *info, char value)
+{
+    for (int i = 0; i < info->num; i++) {
+        slice_info *data = &(info->slice_arr[i]);
+        set_mem_value(data->ptr, -1, data->size);
+    }
+}
+
 void test_os_malloc_free()
 {
     void *p1 = os_malloc_align(1);
@@ -52,7 +65,7 @@ void test_malloc()
 
     void *p = memory_pool_malloc(pool, 100);
     assert(p);
-    memset(p, -1, 100);
+    set_mem_value(p, -1, 100);
     check_meta_running_state(pool);
 
     memory_pool_free(pool, p);
@@ -60,21 +73,21 @@ void test_malloc()
 
     void *p1 = memory_pool_malloc(pool, 100);
     assert(p1);
-    memset(p1, -1, 100);
+    set_mem_value(p1, -1, 100);
     void *p2 = memory_pool_malloc(pool, 8000);
     assert(p2);
-    memset(p2, 0, 8000);
+    set_mem_value(p2, -1, 8000);
     void *p3 = memory_pool_malloc(pool, 1000);
     assert(p3);
-    memset(p3, 0, 1000);
+    set_mem_value(p3, -1, 1000);
     void *p4 = memory_pool_malloc(pool, 800);
     assert(p4);
-    memset(p4, 0, 800);
+    set_mem_value(p4, -1, 800);
     check_meta_running_state(pool);
 
     void *p5 = memory_pool_malloc(pool, 1000);
     assert(p5);
-    memset(p5, 0, 1000);
+    set_mem_value(p5, -1, 1000);
     check_meta_running_state(pool);
 
     memory_pool_free(pool, p4);
@@ -112,6 +125,7 @@ void test_slice_free()
 
         int ret = memory_pool_slice_free(pool, p, &info);
         assert(ret == FREE_RET_Ok);
+        set_slice_mem_value(&info, -1);
         check_meta_running_state(pool);
         for (int i = 0; i < info.num; i++) {
             memory_pool_free(pool, info.slice_arr[i].ptr);
@@ -134,6 +148,7 @@ void test_slice_free()
 
         int ret = memory_pool_slice_free(pool, p, &info);
         assert(ret == FREE_RET_Ok);
+        set_slice_mem_value(&info, -1);
         check_meta_running_state(pool);
         for (int i = 0; i < info.num; i++) {
             memory_pool_free(pool, info.slice_arr[i].ptr);
@@ -156,6 +171,7 @@ void test_slice_free()
 
         int ret = memory_pool_slice_free(pool, p, &info);
         assert(ret == FREE_RET_Ok);
+        set_slice_mem_value(&info, -1);
         check_meta_running_state(pool);
         for (int i = 0; i < info.num; i++) {
             memory_pool_free(pool, info.slice_arr[i].ptr);
@@ -190,6 +206,7 @@ void test_slice_free()
 
         int ret = memory_pool_slice_free(pool, p, &info);
         assert(ret == FREE_RET_Ok);
+        set_slice_mem_value(&info, -1);
         check_meta_running_state(pool);
         for (int i = 0; i < info.num; i++) {
             memory_pool_free(pool, info.slice_arr[i].ptr);
@@ -263,6 +280,7 @@ void test_thread_slice_free(memory_pool *pool)
     assert(ret == FREE_RET_Ok || ret == FREE_RET_Not_In_Memory_Pool);
 
     if (ret == FREE_RET_Ok) {
+        set_slice_mem_value(&info, -1);
         for (int i = 0; i < info.num; i++) {
             memory_pool_free(pool, info.slice_arr[i].ptr);
         }
