@@ -6,7 +6,9 @@
 #include <stdint.h>
 #include <assert.h>
 
-#ifdef _POSIX_THREADS
+//#define PTHREAD_ENABLED
+
+#ifdef PTHREAD_ENABLED
 #include <pthread.h>
 #else
 #include <mutex>
