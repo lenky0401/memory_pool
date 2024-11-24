@@ -3,7 +3,6 @@ Debug/
 memorypool.opensdf
 memorypool.sdf
 x64/
-memorypool/memorypool.vcxproj*
 
 # Prerequisites
 *.d
