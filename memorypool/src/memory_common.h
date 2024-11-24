@@ -56,19 +56,16 @@ static void os_free_align(void *ptr)
 
 static uint32_t get_align_order(uint32_t size)
 {
-    assert(size > 0);
-
-    uint32_t num = (((size) + MP_CACHELINE_SIZE - 1) / MP_CACHELINE_SIZE);
-    assert(num >= 1);
-    if (num == 1) {
+    if (size == 0) {
         return 0;
     }
 
-    uint32_t order = 0;
-    //算2的幂，固定值
-    num = (num + 1) / 2 * 2;
-    while (num > 1) {
-        num = num >> 1;
+    uint32_t num = (((size) + MP_CACHELINE_SIZE - 1) / MP_CACHELINE_SIZE);
+    assert(num >= 1);
+
+    int32_t order = (num & (num - 1)) ? 0 : -1;
+    while (num) {
+        num >>= 1;
         order++;
     }
 

@@ -48,13 +48,52 @@ void test_os_malloc_free()
 
 void test_get_align_order()
 {
-    assert(get_align_order(MP_CACHELINE_SIZE / 2) == 0);
-    assert(get_align_order(MP_CACHELINE_SIZE) == 0);
-    assert(get_align_order(MP_CACHELINE_SIZE * 2) == 1);
-    assert(get_align_order(MP_CACHELINE_SIZE * 3) == 2);
-    assert(get_align_order(MP_CACHELINE_SIZE * 4) == 2);
-    assert(get_align_order(MP_CACHELINE_SIZE * 512) == 9);
-    assert(get_align_order(MP_CACHELINE_SIZE * 1024) == 10);
+    //0: (0, 1]
+    assert(get_align_order(0) == 0);
+    assert(get_align_order(1) == 0);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 0.5f)) == 0);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 0.8f)) == 0);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 1.0f)) == 0);
+
+    //1: (1, 2]
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 1.1f)) == 1);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 1.8f)) == 1);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 2.0f)) == 1);
+
+    //2: (2, 4]
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 2.1f)) == 2);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 2.8f)) == 2);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 3.0f)) == 2);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 4.0f)) == 2);
+
+    //3: (4, 8]
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 4.1f)) == 3);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 5.8f)) == 3);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 6.0f)) == 3);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 7.0f)) == 3);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 8.0f)) == 3);
+
+    //4: (8, 16]
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 8.1f)) == 4);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 9.8f)) == 4);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 12.0f)) == 4);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 14.0f)) == 4);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 16.0f)) == 4);
+
+    //5: (16, 32]
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 16.1f)) == 5);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 20.8f)) == 5);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 26.0f)) == 5);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 28.0f)) == 5);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 32.0f)) == 5);
+
+    //n: other
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 511.1f)) == 9);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 512.0f)) == 9);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 513.0f)) == 10);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 514.0f)) == 10);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 1024.0f)) == 10);
+    assert(get_align_order((uint32_t)(MP_CACHELINE_SIZE * 1024.1f)) == 11);
 }
 
 void test_malloc()
